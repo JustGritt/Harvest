@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { initializeField, scaleCost } from '$lib/utils/gameUtils';
 
 function createGameStore() {
   const { subscribe, update } = writable({
@@ -6,9 +7,8 @@ function createGameStore() {
     field: [],
     rows: 3,
     cols: 3,
-    yieldMultiplier: 10,
+    yieldMultiplier: 1,
     growthSpeedMultiplier: 1,
-    autoHarvest: false,
     sprinklers: 0,
     farmers: 0,
     seedPlanters: 0,
@@ -16,7 +16,6 @@ function createGameStore() {
     farmerCost: 300,
     seedPlanterCost: 250,
     yieldCost: 100,
-    growthCost: 150,
     expandFieldCost: 500,
     lastSeedPlanterAction: 0,
     seedPlanterCooldown: 10000,
@@ -24,26 +23,12 @@ function createGameStore() {
     lastFarmerHarvest: 0,
     farmerHarvestDelay: 10000,
     farmerHarvestTime: 3000,
-    farmerCooldownCost: 250
+    farmerCooldownCost: 250,
+    fertilizerLevel: 0,
+    fertilizerCost: 500,
+    startTime: Date.now(),
+    totalHarvested: 0
   });
-
-  function initializeField(rows: number, cols: number) {
-    const field = [];
-    for (let r = 0; r < rows; r++) {
-      const row = [];
-      for (let c = 0; c < cols; c++) {
-        row.push({
-          id: `${r}-${c}`,
-          status: 'empty',
-          plantedAt: null,
-          readyTime: null,
-          harvestStartedAt: null
-        });
-      }
-      field.push(row);
-    }
-    return field;
-  }
 
   update(state => ({
     ...state,
@@ -61,7 +46,8 @@ function createGameStore() {
             cell.harvestStartedAt = null;
             cell.plantedAt = null;
             cell.readyTime = null;
-            state.money += 10 * state.yieldMultiplier;
+            state.money += 10 * state.yieldMultiplier * (1 + state.fertilizerLevel * 0.1);
+            state.totalHarvested++;
           }
         }
       }
@@ -96,7 +82,6 @@ function createGameStore() {
             if (cell.status === 'empty') {
               cell.status = 'growing';
               cell.plantedAt = now;
-              // Updated sprinkler multiplier from 0.2 to 0.5
               cell.readyTime = now + (5000 / (state.growthSpeedMultiplier + state.sprinklers * 0.5));
               remainingSeedPlanters--;
             }
@@ -117,7 +102,6 @@ function createGameStore() {
         if (cell.status === 'empty') {
           cell.status = 'growing';
           cell.plantedAt = Date.now();
-          // Updated sprinkler multiplier
           cell.readyTime = cell.plantedAt + (5000 / (state.growthSpeedMultiplier + state.sprinklers * 0.5));
         }
         return state;
@@ -130,7 +114,8 @@ function createGameStore() {
           cell.status = 'empty';
           cell.plantedAt = null;
           cell.readyTime = null;
-          state.money += 10 * state.yieldMultiplier;
+          state.money += 10 * state.yieldMultiplier * (1 + state.fertilizerLevel * 0.1);
+          state.totalHarvested++;
         }
         return state;
       });
@@ -151,7 +136,7 @@ function createGameStore() {
             });
           }
           state.field.push(newRow);
-          state.expandFieldCost = Math.floor(state.expandFieldCost * 1.2);
+          state.expandFieldCost = scaleCost(state.expandFieldCost, 1.2);
         }
         return state;
       });
@@ -173,18 +158,17 @@ function createGameStore() {
         if (state.money >= state.yieldCost) {
           state.money -= state.yieldCost;
           state.yieldMultiplier += 1;
-          state.yieldCost = Math.floor(state.yieldCost * 1.5);
+          state.yieldCost = scaleCost(state.yieldCost);
         }
         return state;
       });
     },
-    // Removed upgradeGrowth from the returned API
     buySprinkler: () => {
       update(state => {
         if (state.money >= state.sprinklerCost) {
           state.money -= state.sprinklerCost;
           state.sprinklers += 1;
-          state.sprinklerCost = Math.floor(state.sprinklerCost * 1.5);
+          state.sprinklerCost = scaleCost(state.sprinklerCost);
         }
         return state;
       });
@@ -194,7 +178,7 @@ function createGameStore() {
         if (state.money >= state.farmerCost) {
           state.money -= state.farmerCost;
           state.farmers += 1;
-          state.farmerCost = Math.floor(state.farmerCost * 1.5);
+          state.farmerCost = scaleCost(state.farmerCost);
           state.lastFarmerHarvest = Date.now();
         }
         return state;
@@ -205,7 +189,7 @@ function createGameStore() {
         if (state.money >= state.seedPlanterCost) {
           state.money -= state.seedPlanterCost;
           state.seedPlanters += 1;
-          state.seedPlanterCost = Math.floor(state.seedPlanterCost * 1.5);
+          state.seedPlanterCost = scaleCost(state.seedPlanterCost);
           state.lastSeedPlanterAction = Date.now();
         }
         return state;
@@ -216,7 +200,7 @@ function createGameStore() {
         if (state.money >= state.farmerCooldownCost) {
           state.money -= state.farmerCooldownCost;
           state.farmerHarvestDelay = Math.max(2000, state.farmerHarvestDelay - 1000);
-          state.farmerCooldownCost = Math.floor(state.farmerCooldownCost * 1.5);
+          state.farmerCooldownCost = scaleCost(state.farmerCooldownCost);
         }
         return state;
       });
@@ -226,7 +210,17 @@ function createGameStore() {
         if (state.money >= state.seedPlanterCooldownCost) {
           state.money -= state.seedPlanterCooldownCost;
           state.seedPlanterCooldown = Math.max(2000, state.seedPlanterCooldown - 1000);
-          state.seedPlanterCooldownCost = Math.floor(state.seedPlanterCooldownCost * 1.5);
+          state.seedPlanterCooldownCost = scaleCost(state.seedPlanterCooldownCost);
+        }
+        return state;
+      });
+    },
+    upgradeFertilizer: () => {
+      update(state => {
+        if (state.money >= state.fertilizerCost) {
+          state.money -= state.fertilizerCost;
+          state.fertilizerLevel += 1;
+          state.fertilizerCost = scaleCost(state.fertilizerCost, 1.7);
         }
         return state;
       });

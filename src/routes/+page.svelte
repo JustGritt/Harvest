@@ -56,22 +56,17 @@
   function buySeedPlanterCooldown() {
     gameStore.upgradeSeedPlanterCooldown();
   }
+  function buyFertilizer() {
+    gameStore.upgradeFertilizer();
+  }
 </script>
 
-<div class="flex">
-  <div class="flex-1 p-4">
-    <div class="mb-4 space-x-4">
-      <span>Yield x{game.yieldMultiplier}</span>
-      <span>Growth Speed x{game.growthSpeedMultiplier}</span>
-      <span>Sprinklers: {game.sprinklers}</span>
-      <span>Farmers: {game.farmers}</span>
-      <span>Seed Planters: {game.seedPlanters}</span>
-    </div>
-
+<section class="relative flex">
+  <div class="flex-1 p-4 pr-0">
     <div class="grid gap-2" style="grid-template-columns: repeat({game.cols}, minmax(0, 1fr));">
       {#each game.field as row, r}
         {#each row as cell, c}
-          <div class="border p-4 text-center cursor-pointer bg-green-100 hover:bg-green-200 relative min-h-32 flex flex-col justify-center rounded"
+          <div class="border border-green-700 p-4 text-center cursor-pointer bg-green-100 hover:bg-green-200 relative min-h-32 flex flex-col justify-center rounded"
             on:click={() => {
               if (cell.status === 'empty') {
                 plant(r, c);
@@ -102,53 +97,75 @@
       {/each}
     </div>
   </div>
+
   <section class="p-4 space-y-4">
-    <div class="w-64 bg-gray-200 p-4 space-y-4">
-      <h3 class="font-bold text-xl">💰 {game.money}</h3>
+    <div class="sticky top-4 w-64 bg-green-100 border border-green-700 rounded p-4 space-y-4">
+      <h3 class="font-bold text-xl truncate">💰 {game.money}</h3>
 
-      <div class="border p-2 rounded bg-white">
-        <h4 class="font-bold mb-2">Field Upgrades</h4>
-        <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full" on:click={expand}>
-          Expand Field ({game.expandFieldCost} 💰)
-        </button>
-      </div>
+    <div class="border border-green-700 p-2 rounded bg-white">
+      <h4 class="font-bold mb-2">Automation Upgrades</h4>
 
-      <div class="border p-2 rounded bg-white">
-        <h4 class="font-bold mb-2">Crop Upgrades</h4>
-        <button on:click={buyYield} class="w-full bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
-          Upgrade Yield ({game.yieldCost} 💰)
-        </button>
-      </div>
+      <button on:click={buySprinkler} class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
+        Buy Sprinkler ({game.sprinklerCost} 💰)
+      </button>
+      <p class="text-xs text-gray-600 mt-1">
+        Sprinklers boost crop growth speed.
+      </p>
 
-      <div class="border p-2 rounded bg-white">
-        <h4 class="font-bold mb-2">Automation Upgrades</h4>
-        <button on:click={buySprinkler} class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
-          Buy Sprinkler ({game.sprinklerCost} 💰)
-        </button>
-        <button on:click={buyFarmer} class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 mt-2">
-          Hire Farmer ({game.farmerCost} 💰)
-        </button>
-        <button on:click={buySeedPlanter} class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 mt-2">
-          Purchase Seed Planter ({game.seedPlanterCost} 💰)
-        </button>
-        <button on:click={buyFarmerCooldown} class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mt-2">
-          Reduce Farmer Cooldown ({game.farmerCooldownCost} 💰)
-        </button>
-        <button on:click={buySeedPlanterCooldown} class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mt-2">
-          Reduce Seed Planter Cooldown ({game.seedPlanterCooldownCost} 💰)
-        </button>
+      <button on:click={buyFarmer} class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 mt-2">
+        Hire Farmer ({game.farmerCost} 💰)
+      </button>
+      <p class="text-xs text-gray-600 mt-1">
+        Farmers automatically harvest ready crops.
+      </p>
+
+      <button on:click={buySeedPlanter} class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 mt-2">
+        Purchase Seed Planter ({game.seedPlanterCost} 💰)
+      </button>
+      <p class="text-xs text-gray-600 mt-1">
+        Seed Planters help plant crops in empty plots.
+      </p>
+    </div>
+
+    {#if game.farmers > 0 || game.seedPlanters > 0}
+      <div class="border border-green-700 p-2 rounded bg-white">
+        <h4 class="font-bold mb-2">Automation Cooldowns</h4>
+
+        {#if game.farmers > 0}
+          <button on:click={buyFarmerCooldown} class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mt-2">
+            Reduce Farmer Cooldown ({game.farmerCooldownCost} 💰)
+          </button>
+          <p class="text-xs text-gray-600 mt-1">
+            Shorten the waiting time between farmer harvests.
+          </p>
+        {/if}
+
+        {#if game.seedPlanters > 0}
+          <button on:click={buySeedPlanterCooldown} class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mt-2">
+            Reduce Seed Planter Cooldown ({game.seedPlanterCooldownCost} 💰)
+          </button>
+          <p class="text-xs text-gray-600 mt-1">
+            Decrease the delay before seed planters engage.
+          </p>
+        {/if}
       </div>
+    {/if}
+
+    <div class="border border-green-700 p-2 rounded bg-white">
+      <h4 class="font-bold mb-2">Advanced Upgrades</h4>
+
+      <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full" on:click={expand}>
+        Expand Field ({game.expandFieldCost} 💰)
+      </button>
+
+      <button on:click={buyFertilizer} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full mt-2">
+        Fertilizer Upgrade ({game.fertilizerCost} 💰)
+      </button>
+    </div>
 
       {#if game.sprinklers > 0 || game.farmers > 0 || game.seedPlanters > 0}
-        <div class="border p-2 rounded bg-white">
+        <div class="border border-green-700 p-2 rounded bg-white">
           <h4 class="font-bold mb-2">Cooldowns</h4>
-          {#if game.sprinklers > 0}
-            <div class="mb-2">
-              <div class="text-sm">
-                Sprinkler Bonus: +{(game.sprinklers * 0.5).toFixed(1)}
-              </div>
-            </div>
-          {/if}
           {#if game.farmers > 0}
             <div class="mb-2">
               <div class="text-sm">
@@ -171,6 +188,89 @@
           {/if}
         </div>
       {/if}
+
+      <div class="border border-green-700 p-2 rounded bg-white">
+        <h4 class="font-bold mb-2">Game Stats</h4>
+
+        <section class="border-t border-gray-300 pt-2 mt-2">
+          <div class="flex w-full justify-between text-sm">
+            Sprinklers
+            <span class="font-bold">
+              {game.sprinklers}
+            </span>
+          </div>
+
+          <div class="flex w-full justify-between text-sm">
+            Sprinklers reduction
+            <span class="font-bold">
+                {#if game.sprinklers > 0}
+                  {(game.sprinklers * 0.5).toFixed(1)}s
+                {:else}
+                  0s
+                {/if}
+            </span>
+          </div>
+        </section>
+
+        <section class="border-t border-gray-300 pt-2 mt-2">
+          <div class="flex w-full justify-between text-sm">
+            Farmers
+            <span class="font-bold">
+              {game.farmers}
+            </span>
+          </div>
+
+          <div class="flex w-full justify-between text-sm">
+            Farmers harvest
+            <span class="font-bold">
+              {game.farmerHarvestDelay / 1000}s
+            </span>
+          </div>
+        </section>
+
+
+        <section class="border-t border-gray-300 pt-2 mt-2">
+          <div class="flex w-full justify-between text-sm">
+            Seed Planters
+            <span class="font-bold">
+              {game.seedPlanters}
+            </span>
+          </div>
+
+          <div class="flex w-full justify-between text-sm">
+            Seed Planters cooldown
+            <span class="font-bold">
+              {game.seedPlanterCooldown / 1000}s
+            </span>
+          </div>
+        </section>
+
+        <section class="border-t border-gray-300 pt-2 mt-2">
+          <div class="flex w-full justify-between text-sm">
+            Field size
+            <span class="font-bold">
+              {game.rows}
+            </span>
+          </div>
+
+          <div class="flex w-full justify-between text-sm">
+            Fertilizer level
+            <span class="font-bold">
+              {game.fertilizerLevel}
+            </span>
+          </div>
+        </section>
+
+        <section class="border-t border-gray-300 pt-2 mt-2">
+          <div class="flex w-full justify-between text-sm">
+            Time elapsed
+            <span class="font-bold">
+              {((currentTime - game.startTime) / 1000).toFixed(0)}s
+            </span>
+          </div>
+        </section>
+      </div>
+
     </div>
   </section>
-</div>
+</section>

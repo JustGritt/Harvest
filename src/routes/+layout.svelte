@@ -3,8 +3,6 @@
 	import '../app.css';
 </script>
 
-<main class="p-4">
-
-
+<main class="min-h-screen bg-green-50">
 	<slot />
 </main>
