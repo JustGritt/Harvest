@@ -1,276 +1,288 @@
-<script>
-  import { onMount } from 'svelte';
-  import { gameStore } from '$lib/store.ts';
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { gameStore } from '$lib/store';
+	import { BALANCE } from '$lib/data/balance';
+	import { CROPS, CROP_ORDER } from '$lib/data/crops';
+	import { UPGRADES, UPGRADE_ORDER, type UpgradeCategory } from '$lib/data/upgrades';
+	import UpgradeButton from '$lib/components/UpgradeButton.svelte';
+	import type { Cell, OfflineReport, UpgradeId } from '$lib/types';
+	import {
+		describeEffect,
+		farmerInterval,
+		formatDuration,
+		formatNumber,
+		formatSeconds,
+		growTime,
+		harvestValue,
+		isMaxed,
+		planterInterval,
+		prestigeGain,
+		prestigeThreshold,
+		upgradeCost
+	} from '$lib/utils/gameUtils';
 
-  let game;
-  const unsubscribe = gameStore.subscribe(value => {
-    game = value;
-  });
+	const SECTIONS: { category: UpgradeCategory; title: string }[] = [
+		{ category: 'workers', title: 'Workers' },
+		{ category: 'growth', title: 'Growth & Value' },
+		{ category: 'field', title: 'Field' }
+	];
 
-  let currentTime = Date.now();
-  let progressInterval, growthInterval, farmerInterval;
+	$: game = $gameStore;
+	$: now = game.lastTick;
+	$: cols = game.field[0]?.length ?? BALANCE.baseCols;
+	$: gain = prestigeGain(game.runEarned);
+	$: showPrestige = gain > 0 || game.prestigeCount > 0;
 
-  onMount(() => {
-    progressInterval = setInterval(() => {
-      currentTime = Date.now();
-    }, 100);
-    growthInterval = setInterval(() => {
-      gameStore.updateGrowth();
-    }, 1000);
-    farmerInterval = setInterval(() => {
-      gameStore.autoHarvestByFarmers();
-    }, 2000);
+	let offline: OfflineReport | null = null;
 
-    return () => {
-      clearInterval(progressInterval);
-      clearInterval(growthInterval);
-      clearInterval(farmerInterval);
-      unsubscribe();
-    }
-  });
+	// Income/s averaged over the last 10s of run earnings
+	let samples: { t: number; earned: number }[] = [];
+	let incomePerSec = 0;
 
-  function plant(r, c) {
-    gameStore.plantCrop(r, c);
-  }
-  function harvest(r, c) {
-    gameStore.harvestCrop(r, c);
-  }
-  function expand() {
-    gameStore.expandField();
-  }
-  function buyYield() {
-    gameStore.upgradeYield();
-  }
-  function buySprinkler() {
-    gameStore.buySprinkler();
-  }
-  function buyFarmer() {
-    gameStore.buyFarmer();
-  }
-  function buySeedPlanter() {
-    gameStore.buySeedPlanter();
-  }
-  function buyFarmerCooldown() {
-    gameStore.upgradeFarmerCooldown();
-  }
-  function buySeedPlanterCooldown() {
-    gameStore.upgradeSeedPlanterCooldown();
-  }
-  function buyFertilizer() {
-    gameStore.upgradeFertilizer();
-  }
+	function sampleIncome() {
+		const t = Date.now();
+		const earned = $gameStore.runEarned;
+		const last = samples[samples.length - 1];
+		if (last && earned < last.earned) samples = []; // run was reset
+		samples = [...samples.filter((s) => t - s.t <= 10_000), { t, earned }];
+		const first = samples[0];
+		incomePerSec = t > first.t ? (earned - first.earned) / ((t - first.t) / 1000) : 0;
+	}
+
+	onMount(() => {
+		const report = gameStore.load();
+		if (report && report.earned > 0 && report.elapsed >= 60_000) offline = report;
+
+		const tickInterval = setInterval(() => gameStore.tick(), BALANCE.tickMs);
+		const incomeInterval = setInterval(sampleIncome, 1000);
+		const saveInterval = setInterval(gameStore.save, BALANCE.saveIntervalMs);
+		const onVisibility = () => {
+			if (document.visibilityState === 'hidden') gameStore.save();
+		};
+		document.addEventListener('visibilitychange', onVisibility);
+		window.addEventListener('beforeunload', gameStore.save);
+
+		return () => {
+			clearInterval(tickInterval);
+			clearInterval(incomeInterval);
+			clearInterval(saveInterval);
+			document.removeEventListener('visibilitychange', onVisibility);
+			window.removeEventListener('beforeunload', gameStore.save);
+			gameStore.save();
+		};
+	});
+
+	function clickCell(r: number, c: number, cell: Cell) {
+		if (cell.status === 'empty') {
+			gameStore.plantCrop(r, c);
+		} else {
+			gameStore.harvestCrop(r, c);
+		}
+	}
+
+	function isVisible(id: UpgradeId) {
+		const requires = UPGRADES[id].requires;
+		return !requires || game.upgrades[requires] > 0;
+	}
+
+	function growProgress(cell: Cell) {
+		if (cell.plantedAt === null || cell.readyAt === null) return 0;
+		return Math.min(100, ((now - cell.plantedAt) / (cell.readyAt - cell.plantedAt)) * 100);
+	}
+
+	function sellFarm() {
+		if (
+			confirm(
+				`Sell the farm for ${gain} 🌟 legacy seed${gain === 1 ? '' : 's'}? Money, upgrades and crops reset.`
+			)
+		) {
+			gameStore.prestige();
+		}
+	}
+
+	function hardReset() {
+		if (confirm('Delete your save and start over from scratch? This cannot be undone.')) {
+			gameStore.hardReset();
+		}
+	}
 </script>
 
-<section class="relative flex">
-  <div class="flex-1 p-4 pr-0">
-    <div class="grid gap-2" style="grid-template-columns: repeat({game.cols}, minmax(0, 1fr));">
-      {#each game.field as row, r}
-        {#each row as cell, c}
-          <div class="border border-green-700 p-4 text-center cursor-pointer bg-green-100 hover:bg-green-200 relative min-h-32 flex flex-col justify-center rounded"
-            on:click={() => {
-              if (cell.status === 'empty') {
-                plant(r, c);
-              } else if (cell.status === 'ready') {
-                harvest(r, c);
-              }
-            }}>
-            {#if cell.status === 'empty'}
-              <div>Empty</div>
-            {:else if cell.status === 'growing'}
-              <div class="text-2xl">🌱</div>
-              <div class="w-full bg-gray-300 h-2 mt-2 rounded">
-                <div class="bg-green-500 h-full rounded" style="width: {Math.min(100, ((currentTime - cell.plantedAt) / (cell.readyTime - cell.plantedAt)) * 100)}%;"></div>
-              </div>
-              <div class="text-sm mt-1">Growing…</div>
-            {:else if cell.status === 'ready'}
-              <div class="text-2xl">🌸</div>
-              <div>Ready!</div>
-            {:else if cell.status === 'harvesting'}
-              <div class="text-2xl">🚜</div>
-              <div class="w-full bg-gray-300 h-2 mt-2 rounded">
-                <div class="bg-red-500 h-full rounded" style="width: {Math.min(100, ((currentTime - cell.harvestStartedAt) / game.farmerHarvestTime) * 100)}%;"></div>
-              </div>
-              <div class="text-sm mt-1">Harvesting…</div>
-            {/if}
-          </div>
-        {/each}
-      {/each}
-    </div>
-  </div>
+{#if offline}
+	<div
+		class="mx-4 mt-4 flex items-center justify-between gap-4 rounded border border-green-700 bg-yellow-50 p-3"
+	>
+		<span>
+			While you were away for <b>{formatDuration(offline.elapsed)}</b>, your farm earned
+			<b>{formatNumber(offline.earned)} 💰</b>.
+			{#if offline.elapsed > BALANCE.maxOfflineMs}
+				<span class="text-sm text-gray-600"
+					>(Offline progress is capped at {formatDuration(BALANCE.maxOfflineMs)}.)</span
+				>
+			{/if}
+		</span>
+		<button class="rounded px-2 text-gray-600 hover:bg-yellow-100" on:click={() => (offline = null)}
+			>✕</button
+		>
+	</div>
+{/if}
 
-  <section class="p-4 space-y-4">
-    <div class="sticky top-4 w-64 bg-green-100 border border-green-700 rounded p-4 space-y-4">
-      <h3 class="font-bold text-xl truncate">💰 {game.money}</h3>
+<section class="relative flex flex-col lg:flex-row">
+	<div class="flex-1 p-4 lg:pr-0">
+		<div
+			class="mx-auto grid max-w-3xl gap-2"
+			style="grid-template-columns: repeat({cols}, minmax(0, 1fr));"
+		>
+			{#each game.field as row, r (r)}
+				{#each row as cell, c (cell.id)}
+					<button
+						class="group relative flex aspect-square flex-col items-center justify-center rounded border border-green-700 bg-green-100 p-2 text-center hover:bg-green-200"
+						class:ring-4={cell.status === 'ready'}
+						class:ring-yellow-300={cell.status === 'ready'}
+						on:click={() => clickCell(r, c, cell)}
+					>
+						{#if cell.status === 'empty'}
+							<div class="text-sm text-gray-500">Empty</div>
+							<div class="text-xs text-gray-500 opacity-0 group-hover:opacity-100">
+								Plant {CROPS[game.selectedCrop].icon}
+							</div>
+						{:else if cell.status === 'growing' && cell.crop}
+							<div class="text-2xl opacity-50">{CROPS[cell.crop].icon}</div>
+							<div class="mt-2 h-2 w-full rounded bg-gray-300">
+								<div
+									class="h-full rounded bg-green-500"
+									style="width: {growProgress(cell)}%;"
+								></div>
+							</div>
+						{:else if cell.status === 'ready' && cell.crop}
+							<div class="text-3xl">{CROPS[cell.crop].icon}</div>
+							<div class="text-sm font-semibold">
+								+{formatNumber(harvestValue(cell.crop, game))}
+							</div>
+						{/if}
+					</button>
+				{/each}
+			{/each}
+		</div>
+	</div>
 
-    <div class="border border-green-700 p-2 rounded bg-white">
-      <h4 class="font-bold mb-2">Automation Upgrades</h4>
+	<section class="p-4">
+		<div
+			class="sticky top-4 w-full space-y-4 rounded border border-green-700 bg-green-100 p-4 lg:w-80"
+		>
+			<div>
+				<h3 class="truncate text-xl font-bold">💰 {formatNumber(game.money)}</h3>
+				<p class="text-sm text-gray-600">≈ {formatNumber(incomePerSec)} / s</p>
+			</div>
 
-      <button on:click={buySprinkler} class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
-        Buy Sprinkler ({game.sprinklerCost} 💰)
-      </button>
-      <p class="text-xs text-gray-600 mt-1">
-        Sprinklers boost crop growth speed.
-      </p>
+			<div class="space-y-2 rounded border border-green-700 bg-white p-2">
+				<h4 class="font-bold">Seeds</h4>
+				{#each CROP_ORDER as id (id)}
+					{@const crop = CROPS[id]}
+					{@const unlocked = game.unlockedCrops.includes(id)}
+					{#if unlocked}
+						<button
+							class="flex w-full items-center justify-between rounded border px-3 py-1.5 text-left hover:bg-green-50"
+							class:border-green-700={game.selectedCrop === id}
+							class:bg-green-50={game.selectedCrop === id}
+							class:border-gray-200={game.selectedCrop !== id}
+							on:click={() => gameStore.selectCrop(id)}
+						>
+							<span>{crop.icon} {crop.name}</span>
+							<span class="text-xs text-gray-600">
+								{formatSeconds(growTime(id, game.upgrades))} · {formatNumber(
+									harvestValue(id, game)
+								)} 💰
+							</span>
+						</button>
+					{:else}
+						<button
+							class="flex w-full items-center justify-between rounded bg-blue-500 px-3 py-1.5 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
+							disabled={game.money < crop.unlockCost}
+							on:click={() => gameStore.unlockCrop(id)}
+						>
+							<span>🔒 {crop.icon} {crop.name}</span>
+							<span class="text-sm font-bold">{formatNumber(crop.unlockCost)} 💰</span>
+						</button>
+					{/if}
+				{/each}
+				<p class="text-xs text-gray-600">
+					Slower crops earn more per plot and far more per harvest, so they need fewer clicks and
+					workers.
+				</p>
+			</div>
 
-      <button on:click={buyFarmer} class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 mt-2">
-        Hire Farmer ({game.farmerCost} 💰)
-      </button>
-      <p class="text-xs text-gray-600 mt-1">
-        Farmers automatically harvest ready crops.
-      </p>
+			{#each SECTIONS as section (section.category)}
+				<div class="space-y-3 rounded border border-green-700 bg-white p-2">
+					<h4 class="font-bold">{section.title}</h4>
+					{#each UPGRADE_ORDER.filter((id) => UPGRADES[id].category === section.category && isVisible(id)) as id (id)}
+						<UpgradeButton
+							def={UPGRADES[id]}
+							level={game.upgrades[id]}
+							cost={upgradeCost(id, game.upgrades[id])}
+							canAfford={game.money >= upgradeCost(id, game.upgrades[id])}
+							maxed={isMaxed(id, game.upgrades[id])}
+							effect={describeEffect(id, game)}
+							on:click={() => gameStore.buyUpgrade(id)}
+						/>
+					{/each}
+				</div>
+			{/each}
 
-      <button on:click={buySeedPlanter} class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 mt-2">
-        Purchase Seed Planter ({game.seedPlanterCost} 💰)
-      </button>
-      <p class="text-xs text-gray-600 mt-1">
-        Seed Planters help plant crops in empty plots.
-      </p>
-    </div>
+			{#if showPrestige}
+				<div class="space-y-2 rounded border border-purple-700 bg-white p-2">
+					<h4 class="font-bold">🌟 Legacy</h4>
+					<p class="text-sm">
+						{game.legacySeeds} legacy seeds:
+						<b>+{Math.round(game.legacySeeds * BALANCE.legacySeedBonus * 100)}%</b>
+						income
+					</p>
+					<button
+						class="w-full rounded bg-purple-600 px-3 py-2 text-white hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
+						disabled={gain < 1}
+						on:click={sellFarm}
+					>
+						Sell farm for +{gain} 🌟
+					</button>
+					<p class="text-xs text-gray-600">
+						Next seed at {formatNumber(prestigeThreshold(gain + 1))} 💰 earned this run.
+					</p>
+				</div>
+			{/if}
 
-    {#if game.farmers > 0 || game.seedPlanters > 0}
-      <div class="border border-green-700 p-2 rounded bg-white">
-        <h4 class="font-bold mb-2">Automation Cooldowns</h4>
-
-        {#if game.farmers > 0}
-          <button on:click={buyFarmerCooldown} class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mt-2">
-            Reduce Farmer Cooldown ({game.farmerCooldownCost} 💰)
-          </button>
-          <p class="text-xs text-gray-600 mt-1">
-            Shorten the waiting time between farmer harvests.
-          </p>
-        {/if}
-
-        {#if game.seedPlanters > 0}
-          <button on:click={buySeedPlanterCooldown} class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mt-2">
-            Reduce Seed Planter Cooldown ({game.seedPlanterCooldownCost} 💰)
-          </button>
-          <p class="text-xs text-gray-600 mt-1">
-            Decrease the delay before seed planters engage.
-          </p>
-        {/if}
-      </div>
-    {/if}
-
-    <div class="border border-green-700 p-2 rounded bg-white">
-      <h4 class="font-bold mb-2">Advanced Upgrades</h4>
-
-      <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full" on:click={expand}>
-        Expand Field ({game.expandFieldCost} 💰)
-      </button>
-
-      <button on:click={buyFertilizer} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full mt-2">
-        Fertilizer Upgrade ({game.fertilizerCost} 💰)
-      </button>
-    </div>
-
-      {#if game.sprinklers > 0 || game.farmers > 0 || game.seedPlanters > 0}
-        <div class="border border-green-700 p-2 rounded bg-white">
-          <h4 class="font-bold mb-2">Cooldowns</h4>
-          {#if game.farmers > 0}
-            <div class="mb-2">
-              <div class="text-sm">
-                Farmer Harvest Timer: {Math.max(0, ((game.farmerHarvestDelay - (currentTime - game.lastFarmerHarvest)) / 1000)).toFixed(1)}s
-              </div>
-              <div class="w-full bg-gray-300 h-2 rounded">
-                <div class="bg-blue-500 h-full rounded" style="width: {Math.min(100, ((currentTime - game.lastFarmerHarvest) / game.farmerHarvestDelay) * 100)}%;"></div>
-              </div>
-            </div>
-          {/if}
-          {#if game.seedPlanters > 0}
-            <div>
-              <div class="text-sm">
-                Seed Planter Cooldown: {Math.max(0, ((game.seedPlanterCooldown - (currentTime - game.lastSeedPlanterAction)) / 1000)).toFixed(1)}s
-              </div>
-              <div class="w-full bg-gray-300 h-2 rounded">
-                <div class="bg-yellow-500 h-full rounded" style="width: {Math.min(100, ((currentTime - game.lastSeedPlanterAction) / game.seedPlanterCooldown) * 100)}%;"></div>
-              </div>
-            </div>
-          {/if}
-        </div>
-      {/if}
-
-      <div class="border border-green-700 p-2 rounded bg-white">
-        <h4 class="font-bold mb-2">Game Stats</h4>
-
-        <section class="border-t border-gray-300 pt-2 mt-2">
-          <div class="flex w-full justify-between text-sm">
-            Sprinklers
-            <span class="font-bold">
-              {game.sprinklers}
-            </span>
-          </div>
-
-          <div class="flex w-full justify-between text-sm">
-            Sprinklers reduction
-            <span class="font-bold">
-                {#if game.sprinklers > 0}
-                  {(game.sprinklers * 0.5).toFixed(1)}s
-                {:else}
-                  0s
-                {/if}
-            </span>
-          </div>
-        </section>
-
-        <section class="border-t border-gray-300 pt-2 mt-2">
-          <div class="flex w-full justify-between text-sm">
-            Farmers
-            <span class="font-bold">
-              {game.farmers}
-            </span>
-          </div>
-
-          <div class="flex w-full justify-between text-sm">
-            Farmers harvest
-            <span class="font-bold">
-              {game.farmerHarvestDelay / 1000}s
-            </span>
-          </div>
-        </section>
-
-
-        <section class="border-t border-gray-300 pt-2 mt-2">
-          <div class="flex w-full justify-between text-sm">
-            Seed Planters
-            <span class="font-bold">
-              {game.seedPlanters}
-            </span>
-          </div>
-
-          <div class="flex w-full justify-between text-sm">
-            Seed Planters cooldown
-            <span class="font-bold">
-              {game.seedPlanterCooldown / 1000}s
-            </span>
-          </div>
-        </section>
-
-        <section class="border-t border-gray-300 pt-2 mt-2">
-          <div class="flex w-full justify-between text-sm">
-            Field size
-            <span class="font-bold">
-              {game.rows}
-            </span>
-          </div>
-
-          <div class="flex w-full justify-between text-sm">
-            Fertilizer level
-            <span class="font-bold">
-              {game.fertilizerLevel}
-            </span>
-          </div>
-        </section>
-
-        <section class="border-t border-gray-300 pt-2 mt-2">
-          <div class="flex w-full justify-between text-sm">
-            Time elapsed
-            <span class="font-bold">
-              {((currentTime - game.startTime) / 1000).toFixed(0)}s
-            </span>
-          </div>
-        </section>
-      </div>
-
-    </div>
-  </section>
+			<div class="rounded border border-green-700 bg-white p-2 text-sm">
+				<h4 class="mb-2 font-bold">Stats</h4>
+				<div class="flex justify-between">
+					Farmers <b>{game.upgrades.farmer} · {formatSeconds(farmerInterval(game.upgrades))} each</b
+					>
+				</div>
+				<div class="flex justify-between">
+					Seed planters
+					<b>{game.upgrades.seedPlanter} · {formatSeconds(planterInterval(game.upgrades))} each</b>
+				</div>
+				<div class="flex justify-between">
+					Field <b>{cols} × {game.field.length}</b>
+				</div>
+				<div class="flex justify-between">
+					This run <b>{formatDuration(now - game.runStartedAt)}</b>
+				</div>
+				<div class="flex justify-between">
+					Earned this run <b>{formatNumber(game.runEarned)}</b>
+				</div>
+				<div class="flex justify-between">
+					Lifetime earned <b>{formatNumber(game.lifetimeEarned)}</b>
+				</div>
+				<div class="flex justify-between">
+					Crops harvested <b>{formatNumber(game.totalHarvested)}</b>
+				</div>
+				{#if game.prestigeCount > 0}
+					<div class="flex justify-between">
+						Farms sold <b>{game.prestigeCount}</b>
+					</div>
+				{/if}
+				<button class="mt-2 text-xs text-red-600 hover:underline" on:click={hardReset}>
+					Reset save
+				</button>
+			</div>
+		</div>
+	</section>
 </section>

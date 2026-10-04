@@ -2,86 +2,92 @@
 
 ## Stack
 
-- **SvelteKit 2** with **Svelte 5**. The components use legacy Svelte 4 syntax (`on:click`, `<slot />`, manual `store.subscribe`), which Svelte 5 still supports.
+- **SvelteKit 2** with **Svelte 5**. Components use legacy Svelte 4 syntax: `on:click`, `<slot />`, `export let`, `$:` and `$store` auto-subscriptions. There are no runes.
 - **Tailwind CSS v4**, loaded through `@tailwindcss/vite` and `@import 'tailwindcss'` in `src/app.css`. There is no `tailwind.config.js`.
-- **TypeScript** for library code. The game page `<script>` blocks are plain JS.
+- **TypeScript** everywhere, with strict types for all game state.
 - **Vite 6**, **yarn** (`yarn.lock`), and `@sveltejs/adapter-auto`.
-- There is no backend, database, test suite, or persistence. Everything runs client-side in memory.
+- Everything runs client-side. There is no backend and no test suite. Persistence uses `localStorage`.
 
 ## File map
 
 ```
 src/
-├── app.html                  SvelteKit HTML shell
-├── app.css                   Tailwind entry point
-├── app.d.ts                  SvelteKit ambient types (default)
+├── app.html, app.css, app.d.ts     SvelteKit shell, Tailwind entry, ambient types
 ├── lib/
-│   ├── store.ts              Game state and every game action (the whole game logic)
-│   └── utils/gameUtils.ts    initializeField(), scaleCost()
+│   ├── types.ts                    GameState, Cell, CropId, UpgradeId, OfflineReport
+│   ├── data/
+│   │   ├── balance.ts              Global tunables (worker speed, multipliers, prestige, timings)
+│   │   ├── crops.ts                CROPS definitions + CROP_ORDER
+│   │   └── upgrades.ts             UPGRADES definitions (cost, growth, max, category) + UPGRADE_ORDER
+│   ├── utils/gameUtils.ts          Every formula (one copy each), field helpers, number formatting
+│   ├── store.ts                    gameStore: state, simulation step, actions, save/load
+│   └── components/
+│       └── UpgradeButton.svelte    Generic upgrade row (button + description + effect)
 └── routes/
-    ├── +layout.svelte        Imports app.css; green full-height <main>
-    ├── +page.svelte          The game: field grid, shop sidebar, stats, tick intervals
-    └── emb/                  Experimental page that loads a third-party embed script
-        ├── +layout.svelte       (markspot.app). It has nothing to do with the game.
-        └── +page.svelte
-static/favicon.png
+    ├── +layout.svelte              Imports app.css; green full-height <main>
+    ├── +page.ts                    ssr = false (state comes from localStorage)
+    ├── +page.svelte                Game UI: field grid, sidebar, game loop, autosave
+    └── emb/                        Experimental third-party embed page (markspot.app), not part of the game
+scripts/
+├── balance-sim.ts                  Headless balance sim against the real store (`yarn sim`)
+└── run-sim.mjs                     Bundles the sim with esbuild ($lib alias) and runs it
 ```
 
-## State: `gameStore`
+## Data flow
 
-`src/lib/store.ts` exports a single custom store, `gameStore`, built by `createGameStore()` from a Svelte `writable`.
-
-**State shape (main fields):**
-
-| Group        | Fields                                                                                         |
-| ------------ | ---------------------------------------------------------------------------------------------- |
-| Economy      | `money`, `totalHarvested`, `yieldMultiplier`, `fertilizerLevel`                                |
-| Field        | `field` (2D array of cells), `rows`, `cols`                                                    |
-| Growth       | `growthSpeedMultiplier`, `sprinklers`                                                          |
-| Farmers      | `farmers`, `lastFarmerHarvest`, `farmerHarvestDelay`, `farmerHarvestTime`                      |
-| Seed planter | `seedPlanters`, `lastSeedPlanterAction`, `seedPlanterCooldown`                                 |
-| Costs        | `sprinklerCost`, `farmerCost`, `seedPlanterCost`, `yieldCost`, `expandFieldCost`, `fertilizerCost`, `farmerCooldownCost`, `seedPlanterCooldownCost` |
-| Meta         | `startTime`                                                                                    |
-
-**Cell shape:**
-
-```ts
-{
-  id: string;                      // "row-col"
-  status: 'empty' | 'growing' | 'ready' | 'harvesting';
-  plantedAt: number | null;        // ms timestamp
-  readyTime: number | null;        // ms timestamp
-  harvestStartedAt: number | null; // ms timestamp, only set by farmers
-}
+```
+data/*.ts ──▶ utils/gameUtils.ts (formulas) ──▶ store.ts (state + actions) ──▶ +page.svelte (render + loop)
 ```
 
-None of this is typed in code yet. `field: []` is inferred loosely, and cells are plain object literals.
+- `data/` holds plain definitions with no logic.
+- `gameUtils.ts` holds pure functions of state: `growTime`, `harvestValue`, `valueMultiplier`, `farmerInterval`, `planterInterval`, `upgradeCost`, `isMaxed`, `prestigeGain`, `prestigeThreshold`, `fieldSize`, `resizeField`, `describeEffect`, and the `format*` helpers. **This is the only place formulas live.** The store and the UI both import them.
+- `store.ts` is the only code that mutates state.
 
-**Public API:** `subscribe`, `plantCrop(r, c)`, `harvestCrop(r, c)`, `updateGrowth()`, `autoHarvestByFarmers()`, `expandField()`, `upgradeYield()`, `buySprinkler()`, `buyFarmer()`, `buySeedPlanter()`, `upgradeFarmerCooldown()`, `upgradeSeedPlanterCooldown()`, `upgradeFertilizer()`.
+## `gameStore` API
+
+| Method              | Purpose                                                                                       |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| `subscribe`         | Svelte store contract                                                                         |
+| `tick(now?)`        | Advance the simulation to `now`, in sub-steps of at most `maxStepMs`                          |
+| `plantCrop(r, c)`   | Plant the selected seed if the plot is empty                                                  |
+| `harvestCrop(r, c)` | Harvest if the plot is ready (or its timer has passed)                                        |
+| `buyUpgrade(id)`    | Generic purchase. Checks max level, `requires`, and cost. Resizes the field for `expandField` |
+| `unlockCrop(id)`    | Pay the unlock cost and select the crop                                                       |
+| `selectCrop(id)`    | Change the seed used for planting                                                             |
+| `prestige()`        | Reset the run for legacy seeds (does nothing if the gain is below 1)                          |
+| `save()` / `load()` | Write or read `localStorage`. `load()` simulates offline time and returns an `OfflineReport`  |
+| `hardReset()`       | Delete the save and start fresh                                                               |
 
 ### Conventions in the store
 
-- Every action is `update(state => { ...mutate...; return state; })`. Cells and the state object are **mutated in place**, and returning the same object is enough for Svelte to notify subscribers.
-- Purchase actions follow one pattern: check `money >= cost`, subtract the cost, apply the effect, then set `cost = scaleCost(cost, factor)`. If the player can't afford it, nothing happens and no error is shown.
-- Time is always measured with `Date.now()` and compared against stored timestamps. Nothing counts frames or ticks.
-- The growth-time formula appears **twice**: in `plantCrop` and in the seed-planter branch of `autoHarvestByFarmers`. The payout formula also appears **twice**: in `harvestCrop` and in the farmer branch. Keep each pair in sync, or move them into helpers.
+- Actions are `update(state => { ...mutate...; return state; })`. State is **mutated in place**, and returning the same object still notifies subscribers.
+- Purchases fail silently when they aren't allowed. The UI disables those buttons anyway.
+- All timing uses absolute `Date.now()` timestamps (`plantedAt`, `readyAt`, `lastTick`, `runStartedAt`). Nothing counts ticks. That's what makes catching up after a throttled tab or offline time a plain loop over `step()`.
+- `createInitialState(carry)` builds a fresh run. `carry` holds the fields that survive prestige.
+- `hydrate()` merges a loaded save onto a fresh state, so new fields get defaults. **Bump `SAVE_VERSION`** only for breaking changes to the state shape; doing so throws away existing saves.
 
-## UI: `src/routes/+page.svelte`
+## UI (`src/routes/+page.svelte`)
 
-- Subscribes to `gameStore` by hand and copies the value into a local `game` variable.
-- `onMount` starts the three game-loop intervals (100 ms clock, 1 s growth, 2 s automation; see [game-mechanics.md](game-mechanics.md#game-loop-timers)) and clears them on teardown.
-- Layout has two parts:
-  - **Left:** a CSS grid with `grid-template-columns: repeat(cols, …)`. Each plot is a clickable card that plants when empty and harvests when ready.
-  - **Right:** a sticky 16rem-wide sidebar with the money total and these panels: *Automation Upgrades*, *Automation Cooldowns* (shown only once the player owns automation), *Advanced Upgrades*, *Cooldowns* (live timers), and *Game Stats*.
-- Progress bars are computed inline from `currentTime` and cell timestamps.
+- Reads `$gameStore` reactively. `now` is `game.lastTick`, so progress bars move with the 100 ms tick.
+- `onMount` loads the save (and shows the offline banner), starts the tick, an income sampler that tracks a rolling 10 s average, and autosave. It also saves on `visibilitychange` and `beforeunload`.
+- Layout:
+  - **Left:** the plot grid, at most `max-w-3xl` wide with square cells.
+  - **Right:** a sticky sidebar with money and income/s, then _Seeds_, _Workers_, _Growth & Value_, _Field_, _🌟 Legacy_ (once it's relevant), and _Stats_ (which includes Reset save).
+- Upgrade sections are generated from `UPGRADE_ORDER` filtered by `category`. A new upgrade appears automatically in the matching section.
 
-## Adding a new upgrade
+## Adding things
 
-1. Add its level/count field and `xxxCost` field to the initial state in `store.ts`.
-2. Add a store action that follows the purchase pattern above.
-3. Apply the effect where it matters (the growth formula, the payout formula, or the automation in `autoHarvestByFarmers`). Remember that each formula appears twice.
-4. Add a button (and stat, if useful) to `+page.svelte`.
-5. Document it in [game-mechanics.md](game-mechanics.md#upgrades).
+**A new upgrade**
+
+1. Add its id to `UpgradeId` in `types.ts` and its default level to `createInitialState()` in `store.ts`.
+2. Add its definition to `UPGRADES` and `UPGRADE_ORDER` in `data/upgrades.ts`.
+3. Apply its effect inside the relevant formula in `gameUtils.ts`.
+4. Add a `case` to `describeEffect()`. TypeScript will complain until you do.
+5. Run `yarn sim` and update `docs/game-mechanics.md`.
+
+**A new crop:** add it to `CropId`, `CROPS` and `CROP_ORDER`. The UI and planters pick it up automatically.
+
+Old saves load fine after either change, because `hydrate()` fills in defaults.
 
 ## Commands
 
@@ -89,10 +95,10 @@ None of this is typed in code yet. `field: []` is inferred loosely, and cells ar
 yarn            # install
 yarn dev        # dev server (Vite)
 yarn build      # production build
-yarn preview    # preview the build
 yarn check      # svelte-check type checking
 yarn lint       # prettier --check + eslint
 yarn format     # prettier --write
+yarn sim        # balance simulation (add "active" for the clicks-only player)
 ```
 
-Prettier settings: tabs, single quotes, no trailing commas, print width 100. Most existing source files use 2-space indentation and haven't been formatted with Prettier yet.
+Prettier settings: tabs, single quotes, no trailing commas, print width 100.

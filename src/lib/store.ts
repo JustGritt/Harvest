@@ -1,232 +1,282 @@
-import { writable } from 'svelte/store';
-import { initializeField, scaleCost } from '$lib/utils/gameUtils';
+import { get, writable } from 'svelte/store';
+import { BALANCE } from '$lib/data/balance';
+import { CROPS } from '$lib/data/crops';
+import { UPGRADES } from '$lib/data/upgrades';
+import type { Cell, CropId, GameState, OfflineReport, UpgradeId } from '$lib/types';
+import {
+	farmerInterval,
+	fieldSize,
+	growTime,
+	harvestValue,
+	isMaxed,
+	planterInterval,
+	prestigeGain,
+	resizeField,
+	upgradeCost
+} from '$lib/utils/gameUtils';
+
+const SAVE_KEY = 'harvest-idle-save';
+const SAVE_VERSION = 1;
+
+/** Fresh run. `carry` holds the fields that survive a prestige reset. */
+function createInitialState(
+	carry?: Pick<GameState, 'legacySeeds' | 'prestigeCount' | 'lifetimeEarned' | 'totalHarvested'>
+): GameState {
+	const now = Date.now();
+	const { rows, cols } = fieldSize(0);
+	return {
+		version: SAVE_VERSION,
+		money: 0,
+		field: resizeField([], rows, cols),
+		upgrades: {
+			farmer: 0,
+			seedPlanter: 0,
+			farmerTraining: 0,
+			planterGears: 0,
+			sprinkler: 0,
+			qualitySeeds: 0,
+			fertilizer: 0,
+			expandField: 0
+		},
+		unlockedCrops: ['wheat'],
+		selectedCrop: 'wheat',
+		farmerProgress: 0,
+		planterProgress: 0,
+		lastTick: now,
+		runStartedAt: now,
+		runEarned: 0,
+		legacySeeds: carry?.legacySeeds ?? 0,
+		prestigeCount: carry?.prestigeCount ?? 0,
+		lifetimeEarned: carry?.lifetimeEarned ?? 0,
+		totalHarvested: carry?.totalHarvested ?? 0
+	};
+}
+
+// ---------- Cell helpers (mutate state in place) ----------
+
+function plantCell(state: GameState, cell: Cell, now: number) {
+	cell.status = 'growing';
+	cell.crop = state.selectedCrop;
+	cell.plantedAt = now;
+	cell.readyAt = now + growTime(state.selectedCrop, state.upgrades);
+}
+
+function harvestCell(state: GameState, cell: Cell) {
+	if (cell.status !== 'ready' || !cell.crop) return;
+	const value = harvestValue(cell.crop, state);
+	state.money += value;
+	state.runEarned += value;
+	state.lifetimeEarned += value;
+	state.totalHarvested++;
+	cell.status = 'empty';
+	cell.crop = null;
+	cell.plantedAt = null;
+	cell.readyAt = null;
+}
+
+// ---------- Simulation ----------
+
+/** Advances the simulation by one sub-step ending at `now`. */
+function step(state: GameState, now: number, dt: number) {
+	const ready: Cell[] = [];
+	for (const row of state.field) {
+		for (const cell of row) {
+			if (cell.status === 'growing' && cell.readyAt !== null && now >= cell.readyAt) {
+				cell.status = 'ready';
+			}
+			if (cell.status === 'ready') ready.push(cell);
+		}
+	}
+
+	// Each worker banks at most one action while there's nothing to do.
+	const { farmer: farmers, seedPlanter: planters } = state.upgrades;
+	if (farmers > 0) {
+		state.farmerProgress = Math.min(
+			farmers,
+			state.farmerProgress + (dt * farmers) / farmerInterval(state.upgrades)
+		);
+		let i = 0;
+		while (state.farmerProgress >= 1 && i < ready.length) {
+			harvestCell(state, ready[i++]);
+			state.farmerProgress--;
+		}
+	}
+
+	if (planters > 0) {
+		state.planterProgress = Math.min(
+			planters,
+			state.planterProgress + (dt * planters) / planterInterval(state.upgrades)
+		);
+		if (state.planterProgress >= 1) {
+			for (const row of state.field) {
+				for (const cell of row) {
+					if (state.planterProgress < 1) break;
+					if (cell.status === 'empty') {
+						plantCell(state, cell, now);
+						state.planterProgress--;
+					}
+				}
+			}
+		}
+	}
+}
+
+/** Runs the simulation up to `now` in sub-steps of at most `maxStepMs`. */
+function advance(state: GameState, now: number) {
+	let t = state.lastTick;
+	while (t < now) {
+		const next = Math.min(now, t + BALANCE.maxStepMs);
+		step(state, next, next - t);
+		t = next;
+	}
+	state.lastTick = Math.max(state.lastTick, now);
+}
+
+/** Merges a parsed save onto a fresh state so saves from older builds gain new fields. */
+function hydrate(saved: Partial<GameState>): GameState {
+	const base = createInitialState();
+	const state: GameState = {
+		...base,
+		...saved,
+		upgrades: { ...base.upgrades, ...saved.upgrades }
+	};
+	const { rows, cols } = fieldSize(state.upgrades.expandField);
+	state.field = resizeField(state.field ?? [], rows, cols);
+	if (!state.unlockedCrops.includes(state.selectedCrop)) state.selectedCrop = 'wheat';
+	return state;
+}
 
 function createGameStore() {
-  const { subscribe, update } = writable({
-    money: 0,
-    field: [],
-    rows: 3,
-    cols: 3,
-    yieldMultiplier: 1,
-    growthSpeedMultiplier: 1,
-    sprinklers: 0,
-    farmers: 0,
-    seedPlanters: 0,
-    sprinklerCost: 200,
-    farmerCost: 300,
-    seedPlanterCost: 250,
-    yieldCost: 100,
-    expandFieldCost: 500,
-    lastSeedPlanterAction: 0,
-    seedPlanterCooldown: 10000,
-    seedPlanterCooldownCost: 250,
-    lastFarmerHarvest: 0,
-    farmerHarvestDelay: 10000,
-    farmerHarvestTime: 3000,
-    farmerCooldownCost: 250,
-    fertilizerLevel: 0,
-    fertilizerCost: 500,
-    startTime: Date.now(),
-    totalHarvested: 0
-  });
+	const store = writable<GameState>(createInitialState());
+	const { subscribe, update, set } = store;
 
-  update(state => ({
-    ...state,
-    field: initializeField(state.rows, state.cols)
-  }));
+	return {
+		subscribe,
 
-  function autoHarvestByFarmers() {
-    update(state => {
-      const now = Date.now();
-      for (let r = 0; r < state.field.length; r++) {
-        for (let c = 0; c < state.field[r].length; c++) {
-          const cell = state.field[r][c];
-          if (cell.status === 'harvesting' && now - cell.harvestStartedAt >= state.farmerHarvestTime) {
-            cell.status = 'empty';
-            cell.harvestStartedAt = null;
-            cell.plantedAt = null;
-            cell.readyTime = null;
-            state.money += 10 * state.yieldMultiplier * (1 + state.fertilizerLevel * 0.1);
-            state.totalHarvested++;
-          }
-        }
-      }
-      let activeHarvests = 0;
-      for (let row of state.field) {
-        for (let cell of row) {
-          if (cell.status === 'harvesting') activeHarvests++;
-        }
-      }
-      let availableFarmers = state.farmers - activeHarvests;
-      if (availableFarmers > 0 && (now - state.lastFarmerHarvest) >= state.farmerHarvestDelay) {
-        for (let r = 0; r < state.field.length; r++) {
-          for (let c = 0; c < state.field[r].length; c++) {
-            if (availableFarmers <= 0) break;
-            const cell = state.field[r][c];
-            if (cell.status === 'ready') {
-              cell.status = 'harvesting';
-              cell.harvestStartedAt = now;
-              availableFarmers--;
-            }
-          }
-          if (availableFarmers <= 0) break;
-        }
-        state.lastFarmerHarvest = now;
-      }
-      if (state.seedPlanters > 0 && (now - state.lastSeedPlanterAction) >= state.seedPlanterCooldown) {
-        let remainingSeedPlanters = state.seedPlanters;
-        for (let r = 0; r < state.field.length; r++) {
-          for (let c = 0; c < state.field[r].length; c++) {
-            if (remainingSeedPlanters <= 0) break;
-            const cell = state.field[r][c];
-            if (cell.status === 'empty') {
-              cell.status = 'growing';
-              cell.plantedAt = now;
-              cell.readyTime = now + (5000 / (state.growthSpeedMultiplier + state.sprinklers * 0.5));
-              remainingSeedPlanters--;
-            }
-          }
-          if (remainingSeedPlanters <= 0) break;
-        }
-        state.lastSeedPlanterAction = now;
-      }
-      return state;
-    });
-  }
+		tick: (now = Date.now()) => {
+			update((state) => {
+				advance(state, now);
+				return state;
+			});
+		},
 
-  return {
-    subscribe,
-    plantCrop: (r: number, c: number) => {
-      update(state => {
-        const cell = state.field[r][c];
-        if (cell.status === 'empty') {
-          cell.status = 'growing';
-          cell.plantedAt = Date.now();
-          cell.readyTime = cell.plantedAt + (5000 / (state.growthSpeedMultiplier + state.sprinklers * 0.5));
-        }
-        return state;
-      });
-    },
-    harvestCrop: (r: number, c: number) => {
-      update(state => {
-        const cell = state.field[r][c];
-        if ((cell.status === 'growing' && Date.now() >= cell.readyTime) || cell.status === 'ready') {
-          cell.status = 'empty';
-          cell.plantedAt = null;
-          cell.readyTime = null;
-          state.money += 10 * state.yieldMultiplier * (1 + state.fertilizerLevel * 0.1);
-          state.totalHarvested++;
-        }
-        return state;
-      });
-    },
-    expandField: () => {
-      update(state => {
-        if (state.money >= state.expandFieldCost) {
-          state.money -= state.expandFieldCost;
-          state.rows += 1;
-          const newRow = [];
-          for (let c = 0; c < state.cols; c++) {
-            newRow.push({
-              id: `${state.rows - 1}-${c}`,
-              status: 'empty',
-              plantedAt: null,
-              readyTime: null,
-              harvestStartedAt: null
-            });
-          }
-          state.field.push(newRow);
-          state.expandFieldCost = scaleCost(state.expandFieldCost, 1.2);
-        }
-        return state;
-      });
-    },
-    updateGrowth: () => {
-      update(state => {
-        state.field.forEach(cellRow => {
-          cellRow.forEach(cell => {
-            if (cell.status === 'growing' && Date.now() >= cell.readyTime) {
-              cell.status = 'ready';
-            }
-          });
-        });
-        return state;
-      });
-    },
-    upgradeYield: () => {
-      update(state => {
-        if (state.money >= state.yieldCost) {
-          state.money -= state.yieldCost;
-          state.yieldMultiplier += 1;
-          state.yieldCost = scaleCost(state.yieldCost);
-        }
-        return state;
-      });
-    },
-    buySprinkler: () => {
-      update(state => {
-        if (state.money >= state.sprinklerCost) {
-          state.money -= state.sprinklerCost;
-          state.sprinklers += 1;
-          state.sprinklerCost = scaleCost(state.sprinklerCost);
-        }
-        return state;
-      });
-    },
-    buyFarmer: () => {
-      update(state => {
-        if (state.money >= state.farmerCost) {
-          state.money -= state.farmerCost;
-          state.farmers += 1;
-          state.farmerCost = scaleCost(state.farmerCost);
-          state.lastFarmerHarvest = Date.now();
-        }
-        return state;
-      });
-    },
-    buySeedPlanter: () => {
-      update(state => {
-        if (state.money >= state.seedPlanterCost) {
-          state.money -= state.seedPlanterCost;
-          state.seedPlanters += 1;
-          state.seedPlanterCost = scaleCost(state.seedPlanterCost);
-          state.lastSeedPlanterAction = Date.now();
-        }
-        return state;
-      });
-    },
-    upgradeFarmerCooldown: () => {
-      update(state => {
-        if (state.money >= state.farmerCooldownCost) {
-          state.money -= state.farmerCooldownCost;
-          state.farmerHarvestDelay = Math.max(2000, state.farmerHarvestDelay - 1000);
-          state.farmerCooldownCost = scaleCost(state.farmerCooldownCost);
-        }
-        return state;
-      });
-    },
-    upgradeSeedPlanterCooldown: () => {
-      update(state => {
-        if (state.money >= state.seedPlanterCooldownCost) {
-          state.money -= state.seedPlanterCooldownCost;
-          state.seedPlanterCooldown = Math.max(2000, state.seedPlanterCooldown - 1000);
-          state.seedPlanterCooldownCost = scaleCost(state.seedPlanterCooldownCost);
-        }
-        return state;
-      });
-    },
-    upgradeFertilizer: () => {
-      update(state => {
-        if (state.money >= state.fertilizerCost) {
-          state.money -= state.fertilizerCost;
-          state.fertilizerLevel += 1;
-          state.fertilizerCost = scaleCost(state.fertilizerCost, 1.7);
-        }
-        return state;
-      });
-    },
-    autoHarvestByFarmers
-  };
+		plantCrop: (r: number, c: number) => {
+			update((state) => {
+				const cell = state.field[r]?.[c];
+				if (cell?.status === 'empty') plantCell(state, cell, Date.now());
+				return state;
+			});
+		},
+
+		harvestCrop: (r: number, c: number) => {
+			update((state) => {
+				const cell = state.field[r]?.[c];
+				if (!cell) return state;
+				// Don't wait for the next tick to notice the crop is ready
+				if (cell.status === 'growing' && cell.readyAt !== null && Date.now() >= cell.readyAt) {
+					cell.status = 'ready';
+				}
+				harvestCell(state, cell);
+				return state;
+			});
+		},
+
+		buyUpgrade: (id: UpgradeId) => {
+			update((state) => {
+				const def = UPGRADES[id];
+				const level = state.upgrades[id];
+				if (isMaxed(id, level)) return state;
+				if (def.requires && state.upgrades[def.requires] < 1) return state;
+				const cost = upgradeCost(id, level);
+				if (state.money < cost) return state;
+				state.money -= cost;
+				state.upgrades[id] = level + 1;
+				if (id === 'expandField') {
+					const { rows, cols } = fieldSize(state.upgrades.expandField);
+					state.field = resizeField(state.field, rows, cols);
+				}
+				return state;
+			});
+		},
+
+		unlockCrop: (crop: CropId) => {
+			update((state) => {
+				const cost = CROPS[crop].unlockCost;
+				if (state.unlockedCrops.includes(crop) || state.money < cost) return state;
+				state.money -= cost;
+				state.unlockedCrops.push(crop);
+				state.selectedCrop = crop;
+				return state;
+			});
+		},
+
+		selectCrop: (crop: CropId) => {
+			update((state) => {
+				if (state.unlockedCrops.includes(crop)) state.selectedCrop = crop;
+				return state;
+			});
+		},
+
+		/** Resets the run in exchange for legacy seeds. */
+		prestige: () => {
+			update((state) => {
+				const gain = prestigeGain(state.runEarned);
+				if (gain < 1) return state;
+				return createInitialState({
+					legacySeeds: state.legacySeeds + gain,
+					prestigeCount: state.prestigeCount + 1,
+					lifetimeEarned: state.lifetimeEarned,
+					totalHarvested: state.totalHarvested
+				});
+			});
+		},
+
+		save: () => {
+			try {
+				localStorage.setItem(SAVE_KEY, JSON.stringify(get(store)));
+			} catch {
+				// Storage unavailable (private mode, quota): the game still runs, just unsaved
+			}
+		},
+
+		/** Loads the save and simulates time away. Returns what was earned offline, if anything. */
+		load: (): OfflineReport | null => {
+			let raw: string | null = null;
+			try {
+				raw = localStorage.getItem(SAVE_KEY);
+			} catch {
+				return null;
+			}
+			if (!raw) return null;
+
+			let saved: Partial<GameState>;
+			try {
+				saved = JSON.parse(raw);
+			} catch {
+				return null;
+			}
+			if (saved.version !== SAVE_VERSION) return null;
+
+			const state = hydrate(saved);
+			const now = Date.now();
+			const elapsed = now - state.lastTick;
+			// Anything beyond the offline cap is simply lost
+			state.lastTick = Math.max(state.lastTick, now - BALANCE.maxOfflineMs);
+			const before = state.runEarned;
+			advance(state, now);
+			set(state);
+			return { elapsed, earned: state.runEarned - before };
+		},
+
+		hardReset: () => {
+			try {
+				localStorage.removeItem(SAVE_KEY);
+			} catch {
+				// ignore
+			}
+			set(createInitialState());
+		}
+	};
 }
 
 export const gameStore = createGameStore();
