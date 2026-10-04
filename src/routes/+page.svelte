@@ -124,6 +124,38 @@
 			gameStore.hardReset();
 		}
 	}
+
+	// Save transfer between browsers
+	let showTransfer = false;
+	let transferText = '';
+	let transferStatus: { ok: boolean; message: string } | null = null;
+
+	async function exportSave() {
+		transferText = gameStore.exportSave();
+		try {
+			await navigator.clipboard.writeText(transferText);
+			transferStatus = { ok: true, message: 'Save copied to clipboard.' };
+		} catch {
+			transferStatus = { ok: true, message: 'Copy the text above to keep your save.' };
+		}
+	}
+
+	function importSave() {
+		if (!transferText.trim()) {
+			transferStatus = { ok: false, message: 'Paste an exported save first.' };
+			return;
+		}
+		if (!confirm('Replace your current game with this save? Your current progress will be lost.')) {
+			return;
+		}
+		if (gameStore.importSave(transferText)) {
+			gameStore.save();
+			transferText = '';
+			transferStatus = { ok: true, message: 'Save imported.' };
+		} else {
+			transferStatus = { ok: false, message: "That doesn't look like a valid Harvest save." };
+		}
+	}
 </script>
 
 {#if offline}
@@ -307,9 +339,48 @@
 						Farms sold <b>{game.prestigeCount}</b>
 					</div>
 				{/if}
-				<button class="mt-2 text-xs text-red-600 hover:underline" on:click={hardReset}>
-					Reset save
-				</button>
+				<div class="mt-2 flex gap-3 text-xs">
+					<button
+						class="text-green-800 hover:underline"
+						on:click={() => {
+							showTransfer = !showTransfer;
+							transferStatus = null;
+						}}
+					>
+						{showTransfer ? 'Hide' : 'Export / import'}
+					</button>
+					<button class="text-red-600 hover:underline" on:click={hardReset}>Reset save</button>
+				</div>
+				{#if showTransfer}
+					<div class="mt-2 space-y-2">
+						<textarea
+							bind:value={transferText}
+							rows="3"
+							class="w-full rounded border border-gray-300 p-1 font-mono text-xs break-all"
+							placeholder="Paste an exported save here"
+							aria-label="Save text"
+						></textarea>
+						<div class="flex gap-2">
+							<button
+								class="flex-1 rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+								on:click={exportSave}>Export</button
+							>
+							<button
+								class="flex-1 rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
+								on:click={importSave}>Import</button
+							>
+						</div>
+						{#if transferStatus}
+							<p
+								class="text-xs"
+								class:text-green-700={transferStatus.ok}
+								class:text-red-600={!transferStatus.ok}
+							>
+								{transferStatus.message}
+							</p>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</section>

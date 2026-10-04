@@ -45,18 +45,20 @@ data/*.ts ──▶ utils/gameUtils.ts (formulas) ──▶ store.ts (state + ac
 
 ## `gameStore` API
 
-| Method              | Purpose                                                                                       |
-| ------------------- | --------------------------------------------------------------------------------------------- |
-| `subscribe`         | Svelte store contract                                                                         |
-| `tick(now?)`        | Advance the simulation to `now`, in sub-steps of at most `maxStepMs`                          |
-| `plantCrop(r, c)`   | Plant the selected seed if the plot is empty                                                  |
-| `harvestCrop(r, c)` | Harvest if the plot is ready (or its timer has passed)                                        |
-| `buyUpgrade(id)`    | Generic purchase. Checks max level, `requires`, and cost. Resizes the field for `expandField` |
-| `unlockCrop(id)`    | Pay the unlock cost and select the crop                                                       |
-| `selectCrop(id)`    | Change the seed used for planting                                                             |
-| `prestige()`        | Reset the run for legacy seeds (does nothing if the gain is below 1)                          |
-| `save()` / `load()` | Write or read `localStorage`. `load()` simulates offline time and returns an `OfflineReport`  |
-| `hardReset()`       | Delete the save and start fresh                                                               |
+| Method                              | Purpose                                                                                                                             |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `subscribe`                         | Svelte store contract                                                                                                               |
+| `tick(now?)`                        | Advance the simulation to `now`, in sub-steps of at most `maxStepMs`                                                                |
+| `plantCrop(r, c)`                   | Plant the selected seed if the plot is empty                                                                                        |
+| `harvestCrop(r, c)`                 | Harvest if the plot is ready (or its timer has passed)                                                                              |
+| `buyUpgrade(id)`                    | Generic purchase. Checks max level, `requires`, and cost. Resizes the field for `expandField`                                       |
+| `unlockCrop(id)`                    | Pay the unlock cost and select the crop                                                                                             |
+| `selectCrop(id)`                    | Change the seed used for planting                                                                                                   |
+| `prestige()`                        | Reset the run for legacy seeds (does nothing if the gain is below 1)                                                                |
+| `save()` / `load()`                 | Write or read `localStorage`. `load()` simulates offline time and returns an `OfflineReport`                                        |
+| `exportSave()` / `importSave(text)` | Base64 save string for moving between browsers. Import validates through `parseSave()` and returns `false` if the string is invalid |
+| `onHarvest(listener)`               | Get notified of every harvest (`{ cellId, value, auto }`), for UI feedback. Returns an unsubscribe function                         |
+| `hardReset()`                       | Delete the save and start fresh                                                                                                     |
 
 ### Conventions in the store
 
@@ -72,7 +74,7 @@ data/*.ts ──▶ utils/gameUtils.ts (formulas) ──▶ store.ts (state + ac
 - `onMount` loads the save (and shows the offline banner), starts the tick, an income sampler that tracks a rolling 10 s average, and autosave. It also saves on `visibilitychange` and `beforeunload`.
 - Layout:
   - **Left:** the plot grid, at most `max-w-3xl` wide with square cells.
-  - **Right:** a sticky sidebar with money and income/s, then _Seeds_, _Workers_, _Growth & Value_, _Field_, _🌟 Legacy_ (once it's relevant), and _Stats_ (which includes Reset save).
+  - **Right:** a sticky sidebar with money and income/s, then _Seeds_, _Workers_, _Growth & Value_, _Field_, _🌟 Legacy_ (once it's relevant), and _Stats_ (which includes Export / import and Reset save).
 - Upgrade sections are generated from `UPGRADE_ORDER` filtered by `category`. A new upgrade appears automatically in the matching section.
 
 ## Adding things

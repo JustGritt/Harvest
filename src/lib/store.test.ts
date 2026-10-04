@@ -256,4 +256,38 @@ describe('save / load', () => {
 		expect(report?.earned).toBeLessThanOrEqual(expected);
 		expect(state().lastTick).toBe(T0 + BALANCE.maxOfflineMs * 2);
 	});
+
+	it('rejects saves with the right version but a broken shape', () => {
+		storage[SAVE_KEY] = JSON.stringify({ version: 1, money: 'lots', field: [] });
+		expect(gameStore.load()).toBeNull();
+	});
+});
+
+describe('export / import', () => {
+	it('round-trips through an exported string', () => {
+		state().money = 1234;
+		state().legacySeeds = 2;
+		gameStore.plantCrop(0, 0);
+		const text = gameStore.exportSave();
+		expect(text).toMatch(/^[A-Za-z0-9+/=]+$/);
+
+		gameStore.hardReset();
+		setNow(T0 + 3600_000);
+		expect(
+			gameStore.importSave(`  ${text}
+`)
+		).toBe(true);
+		expect(state().money).toBe(1234);
+		expect(state().legacySeeds).toBe(2);
+		// No offline progress for imports: the clock restarts now
+		expect(state().lastTick).toBe(T0 + 3600_000);
+	});
+
+	it('rejects garbage and leaves the game untouched', () => {
+		state().money = 99;
+		for (const bad of ['', 'not base64!!', btoa('{"version":1}'), btoa('[1,2,3]'), btoa('null')]) {
+			expect(gameStore.importSave(bad)).toBe(false);
+		}
+		expect(state().money).toBe(99);
+	});
 });

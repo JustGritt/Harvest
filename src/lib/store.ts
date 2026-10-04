@@ -150,6 +150,37 @@ function hydrate(saved: Partial<GameState>): GameState {
 	return state;
 }
 
+/** Parses and validates a JSON save. Returns null for anything that isn't a usable save. */
+function parseSave(raw: string): GameState | null {
+	let saved: Partial<GameState>;
+	try {
+		saved = JSON.parse(raw);
+	} catch {
+		return null;
+	}
+	if (typeof saved !== 'object' || saved === null || saved.version !== SAVE_VERSION) return null;
+	const validShape =
+		Number.isFinite(saved.money) &&
+		Number.isFinite(saved.lastTick) &&
+		Array.isArray(saved.field) &&
+		Array.isArray(saved.unlockedCrops) &&
+		typeof saved.upgrades === 'object' &&
+		saved.upgrades !== null;
+	return validShape ? hydrate(saved) : null;
+}
+
+// UTF-8 safe base64, so exported saves survive copy/paste anywhere
+function encodeSave(json: string): string {
+	let binary = '';
+	for (const byte of new TextEncoder().encode(json)) binary += String.fromCharCode(byte);
+	return btoa(binary);
+}
+
+function decodeSave(text: string): string {
+	const binary = atob(text);
+	return new TextDecoder().decode(Uint8Array.from(binary, (ch) => ch.charCodeAt(0)));
+}
+
 function createGameStore() {
 	const store = writable<GameState>(createInitialState());
 	const { subscribe, update, set } = store;
@@ -259,17 +290,9 @@ function createGameStore() {
 			} catch {
 				return null;
 			}
-			if (!raw) return null;
+			const state = raw ? parseSave(raw) : null;
+			if (!state) return null;
 
-			let saved: Partial<GameState>;
-			try {
-				saved = JSON.parse(raw);
-			} catch {
-				return null;
-			}
-			if (saved.version !== SAVE_VERSION) return null;
-
-			const state = hydrate(saved);
 			const now = Date.now();
 			const elapsed = now - state.lastTick;
 			// Anything beyond the offline cap is simply lost
@@ -278,6 +301,27 @@ function createGameStore() {
 			advance(state, now);
 			set(state);
 			return { elapsed, earned: state.runEarned - before };
+		},
+
+		/** Current state as a portable string for copying to another browser. */
+		exportSave: (): string => encodeSave(JSON.stringify(get(store))),
+
+		/**
+		 * Replaces the game with an exported save. Returns false (leaving the game untouched)
+		 * if the text isn't a valid save. Imported saves don't earn offline progress.
+		 */
+		importSave: (text: string): boolean => {
+			let json: string;
+			try {
+				json = decodeSave(text.trim());
+			} catch {
+				return false;
+			}
+			const state = parseSave(json);
+			if (!state) return false;
+			state.lastTick = Date.now();
+			set(state);
+			return true;
 		},
 
 		hardReset: () => {
