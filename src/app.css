@@ -1,1 +1,37 @@
 @import 'tailwindcss';
+
+@theme {
+	--animate-float-up: float-up 0.9s ease-out forwards;
+	--animate-fade-out: fade-out 0.9s ease-out forwards;
+	--animate-ready: ready 1.4s ease-in-out infinite;
+
+	@keyframes float-up {
+		from {
+			opacity: 1;
+			transform: translate(-50%, 0);
+		}
+		to {
+			opacity: 0;
+			transform: translate(-50%, -2.5rem);
+		}
+	}
+
+	@keyframes fade-out {
+		from {
+			opacity: 1;
+		}
+		to {
+			opacity: 0;
+		}
+	}
+
+	@keyframes ready {
+		0%,
+		100% {
+			transform: scale(1);
+		}
+		50% {
+			transform: scale(1.12);
+		}
+	}
+}
