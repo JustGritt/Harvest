@@ -12,7 +12,9 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
-		"sim": "node scripts/run-sim.mjs"
+		"sim": "node scripts/run-sim.mjs",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
@@ -33,6 +35,10 @@
 		"tailwindcss": "^4.0.0",
 		"typescript": "^5.0.0",
 		"typescript-eslint": "^8.20.0",
+		"vite": "^6.0.0",
+		"vitest": "^3"
+	},
+	"resolutions": {
 		"vite": "^6.0.0"
 	}
 }
