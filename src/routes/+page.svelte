@@ -33,6 +33,49 @@
 	$: gain = prestigeGain(game.runEarned);
 	$: showPrestige = gain > 0 || game.prestigeCount > 0;
 
+	// Mobile: the shop lives in a bottom sheet opened from a tab bar. Desktop shows every panel.
+	type Tab = 'seeds' | 'upgrades' | 'legacy' | 'stats';
+	interface TabDef {
+		id: Tab;
+		label: string;
+		icon: string;
+		/** Shows a dot when something in the tab can be bought. */
+		alert: boolean;
+	}
+	let activeTab: Tab | null = null;
+	let tabs: TabDef[];
+	$: if (activeTab === 'legacy' && !showPrestige) activeTab = null;
+	$: tabs = [
+		{
+			id: 'seeds',
+			label: 'Seeds',
+			icon: '🌾',
+			alert: CROP_ORDER.some(
+				(id) => !game.unlockedCrops.includes(id) && game.money >= CROPS[id].unlockCost
+			)
+		},
+		{
+			id: 'upgrades',
+			label: 'Upgrades',
+			icon: '🛒',
+			alert: UPGRADE_ORDER.some(
+				(id) =>
+					isVisible(id) &&
+					!isMaxed(id, game.upgrades[id]) &&
+					game.money >= upgradeCost(id, game.upgrades[id])
+			)
+		},
+		...(showPrestige
+			? [{ id: 'legacy' as const, label: 'Legacy', icon: '🌟', alert: gain > 0 }]
+			: []),
+		{ id: 'stats', label: 'Stats', icon: '📊', alert: false }
+	];
+
+	/** Hidden on mobile unless its tab is open; always shown on desktop. */
+	function panelVisibility(tab: Tab, active: Tab | null) {
+		return `${active === tab ? '' : 'hidden'} lg:block`;
+	}
+
 	let offline: OfflineReport | null = null;
 
 	// Floating "+N" pops shown over harvested plots
@@ -160,7 +203,7 @@
 
 {#if offline}
 	<div
-		class="mx-4 mt-4 flex items-center justify-between gap-4 rounded border border-green-700 bg-yellow-50 p-3"
+		class="mx-2 mt-2 flex items-center justify-between gap-4 rounded border border-green-700 bg-yellow-50 p-3 sm:mx-4 sm:mt-4"
 	>
 		<span>
 			While you were away for <b>{formatDuration(offline.elapsed)}</b>, your farm earned
@@ -177,44 +220,58 @@
 	</div>
 {/if}
 
-<section class="relative flex flex-col lg:flex-row">
-	<div class="flex-1 p-4 lg:pr-0">
+<!-- Mobile money bar -->
+<div
+	class="sticky top-0 z-10 flex items-baseline justify-between border-b border-green-700 bg-green-100 px-3 py-2 lg:hidden"
+>
+	<h3 class="truncate text-lg font-bold">💰 {formatNumber(game.money)}</h3>
+	<p class="text-sm text-gray-600">≈ {formatNumber(incomePerSec)} / s</p>
+</div>
+
+<section class="relative flex flex-col pb-16 lg:flex-row lg:pb-0">
+	<div class="flex-1 p-2 sm:p-4 lg:pr-0">
 		<div
-			class="mx-auto grid max-w-3xl gap-2"
+			class="mx-auto grid max-w-3xl gap-1 sm:gap-2"
 			style="grid-template-columns: repeat({cols}, minmax(0, 1fr));"
 		>
 			{#each game.field as row, r (r)}
 				{#each row as cell, c (cell.id)}
 					<button
-						class="group relative flex aspect-square flex-col items-center justify-center rounded border border-green-700 bg-green-100 p-2 text-center hover:bg-green-200"
-						class:ring-4={cell.status === 'ready'}
+						class="group relative flex aspect-square touch-manipulation flex-col items-center justify-center rounded border border-green-700 bg-green-100 p-0.5 text-center select-none hover:bg-green-200 sm:p-2"
+						class:ring-2={cell.status === 'ready'}
+						class:sm:ring-4={cell.status === 'ready'}
 						class:ring-yellow-300={cell.status === 'ready'}
+						aria-label={cell.crop
+							? `${CROPS[cell.crop].name}, ${cell.status}`
+							: `Empty plot, plant ${CROPS[game.selectedCrop].name}`}
 						on:click={() => clickCell(r, c, cell)}
 					>
 						{#if cell.status === 'empty'}
-							<div class="text-sm text-gray-500">Empty</div>
-							<div class="text-xs text-gray-500 opacity-0 group-hover:opacity-100">
+							<div class="hidden text-sm text-gray-500 sm:block">Empty</div>
+							<div class="hidden text-xs text-gray-500 opacity-0 group-hover:opacity-100 sm:block">
 								Plant {CROPS[game.selectedCrop].icon}
 							</div>
 						{:else if cell.status === 'growing' && cell.crop}
-							<div class="text-2xl opacity-50">{CROPS[cell.crop].icon}</div>
-							<div class="mt-2 h-2 w-full rounded bg-gray-300">
+							<div class="text-lg opacity-50 sm:text-2xl">{CROPS[cell.crop].icon}</div>
+							<div class="mt-1 h-1 w-full rounded bg-gray-300 sm:mt-2 sm:h-2">
 								<div
 									class="h-full rounded bg-green-500"
 									style="width: {growProgress(cell)}%;"
 								></div>
 							</div>
 						{:else if cell.status === 'ready' && cell.crop}
-							<div class="motion-safe:animate-ready text-3xl">{CROPS[cell.crop].icon}</div>
-							<div class="text-sm font-semibold">
+							<div class="motion-safe:animate-ready text-xl sm:text-3xl">
+								{CROPS[cell.crop].icon}
+							</div>
+							<div class="hidden text-sm font-semibold sm:block">
 								+{formatNumber(harvestValue(cell.crop, game))}
 							</div>
 						{/if}
 						{#each pops.filter((p) => p.cellId === cell.id) as pop (pop.key)}
 							<span
-								class="motion-safe:animate-float-up motion-reduce:animate-fade-out pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 whitespace-nowrap {pop.auto
+								class="motion-safe:animate-float-up motion-reduce:animate-fade-out pointer-events-none absolute top-1/4 left-1/2 z-[1] -translate-x-1/2 whitespace-nowrap {pop.auto
 									? 'text-xs text-gray-600'
-									: 'text-base font-bold text-green-800'}"
+									: 'text-sm font-bold text-green-800 sm:text-base'}"
 							>
 								+{formatNumber(pop.value)}
 							</span>
@@ -225,16 +282,26 @@
 		</div>
 	</div>
 
-	<section class="p-4">
+	<!-- Desktop: sticky sidebar. Mobile: bottom sheet above the tab bar, open only when a tab is. -->
+	<section
+		class="{activeTab
+			? 'block'
+			: 'hidden'} fixed inset-x-0 bottom-14 z-20 max-h-[40vh] overflow-y-auto border-t border-green-700 bg-green-100 p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.1)] lg:static lg:block lg:max-h-none lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-4 lg:shadow-none"
+	>
 		<div
-			class="sticky top-4 w-full space-y-4 rounded border border-green-700 bg-green-100 p-4 lg:w-80"
+			class="w-full space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-80 lg:overflow-y-auto lg:rounded lg:border lg:border-green-700 lg:bg-green-100 lg:p-4"
 		>
-			<div>
+			<div class="hidden lg:block">
 				<h3 class="truncate text-xl font-bold">💰 {formatNumber(game.money)}</h3>
 				<p class="text-sm text-gray-600">≈ {formatNumber(incomePerSec)} / s</p>
 			</div>
 
-			<div class="space-y-2 rounded border border-green-700 bg-white p-2">
+			<div
+				class="{panelVisibility(
+					'seeds',
+					activeTab
+				)} space-y-2 rounded border border-green-700 bg-white p-2"
+			>
 				<h4 class="font-bold">Seeds</h4>
 				{#each CROP_ORDER as id (id)}
 					{@const crop = CROPS[id]}
@@ -271,25 +338,32 @@
 				</p>
 			</div>
 
-			{#each SECTIONS as section (section.category)}
-				<div class="space-y-3 rounded border border-green-700 bg-white p-2">
-					<h4 class="font-bold">{section.title}</h4>
-					{#each UPGRADE_ORDER.filter((id) => UPGRADES[id].category === section.category && isVisible(id)) as id (id)}
-						<UpgradeButton
-							def={UPGRADES[id]}
-							level={game.upgrades[id]}
-							cost={upgradeCost(id, game.upgrades[id])}
-							canAfford={game.money >= upgradeCost(id, game.upgrades[id])}
-							maxed={isMaxed(id, game.upgrades[id])}
-							effect={describeEffect(id, game)}
-							on:click={() => gameStore.buyUpgrade(id)}
-						/>
-					{/each}
-				</div>
-			{/each}
+			<div class="{panelVisibility('upgrades', activeTab)} space-y-4">
+				{#each SECTIONS as section (section.category)}
+					<div class="space-y-3 rounded border border-green-700 bg-white p-2">
+						<h4 class="font-bold">{section.title}</h4>
+						{#each UPGRADE_ORDER.filter((id) => UPGRADES[id].category === section.category && isVisible(id)) as id (id)}
+							<UpgradeButton
+								def={UPGRADES[id]}
+								level={game.upgrades[id]}
+								cost={upgradeCost(id, game.upgrades[id])}
+								canAfford={game.money >= upgradeCost(id, game.upgrades[id])}
+								maxed={isMaxed(id, game.upgrades[id])}
+								effect={describeEffect(id, game)}
+								on:click={() => gameStore.buyUpgrade(id)}
+							/>
+						{/each}
+					</div>
+				{/each}
+			</div>
 
 			{#if showPrestige}
-				<div class="space-y-2 rounded border border-purple-700 bg-white p-2">
+				<div
+					class="{panelVisibility(
+						'legacy',
+						activeTab
+					)} space-y-2 rounded border border-purple-700 bg-white p-2"
+				>
 					<h4 class="font-bold">🌟 Legacy</h4>
 					<p class="text-sm">
 						{game.legacySeeds} legacy seeds:
@@ -309,7 +383,12 @@
 				</div>
 			{/if}
 
-			<div class="rounded border border-green-700 bg-white p-2 text-sm">
+			<div
+				class="{panelVisibility(
+					'stats',
+					activeTab
+				)} rounded border border-green-700 bg-white p-2 text-sm"
+			>
 				<h4 class="mb-2 font-bold">Stats</h4>
 				<div class="flex justify-between">
 					Farmers <b>{game.upgrades.farmer} · {formatSeconds(farmerInterval(game.upgrades))} each</b
@@ -385,3 +464,28 @@
 		</div>
 	</section>
 </section>
+
+<!-- Mobile tab bar -->
+<nav
+	class="fixed inset-x-0 bottom-0 z-30 flex h-14 border-t border-green-700 bg-white lg:hidden"
+	aria-label="Shop"
+>
+	{#each tabs as tab (tab.id)}
+		<button
+			class="relative flex flex-1 flex-col items-center justify-center text-xs"
+			class:bg-green-100={activeTab === tab.id}
+			class:font-bold={activeTab === tab.id}
+			aria-pressed={activeTab === tab.id}
+			on:click={() => (activeTab = activeTab === tab.id ? null : tab.id)}
+		>
+			<span class="text-lg leading-none">{tab.icon}</span>
+			{tab.label}
+			{#if tab.alert}
+				<span
+					class="absolute top-1.5 right-1/4 h-2 w-2 rounded-full bg-orange-500"
+					aria-hidden="true"
+				></span>
+			{/if}
+		</button>
+	{/each}
+</nav>

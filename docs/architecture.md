@@ -72,9 +72,13 @@ data/*.ts ──▶ utils/gameUtils.ts (formulas) ──▶ store.ts (state + ac
 
 - Reads `$gameStore` reactively. `now` is `game.lastTick`, so progress bars move with the 100 ms tick.
 - `onMount` loads the save (and shows the offline banner), starts the tick, an income sampler that tracks a rolling 10 s average, and autosave. It also saves on `visibilitychange` and `beforeunload`.
-- Layout:
+- Layout, desktop (`lg` and up):
   - **Left:** the plot grid, at most `max-w-3xl` wide with square cells.
-  - **Right:** a sticky sidebar with money and income/s, then _Seeds_, _Workers_, _Growth & Value_, _Field_, _🌟 Legacy_ (once it's relevant), and _Stats_ (which includes Export / import and Reset save).
+  - **Right:** a sticky sidebar that scrolls on its own, with money and income/s, then _Seeds_, _Workers_, _Growth & Value_, _Field_, _🌟 Legacy_ (once it's relevant), and _Stats_ (which includes Export / import and Reset save).
+- Layout, mobile (below `lg`):
+  - A sticky money bar on top, and the field at full width. An 8×8 field fits a 375px screen at about 41px per plot. Text labels are hidden below `sm`, leaving icons and progress bars.
+  - A fixed bottom tab bar (Seeds / Upgrades / Legacy / Stats). Tapping a tab opens that panel in a bottom sheet (`max-h-[40vh]`) so the field stays visible. Tapping the tab again closes it. A dot on a tab means something in it is affordable.
+  - Panels are rendered once. `panelVisibility(tab, activeTab)` hides them on mobile unless their tab is open, and `lg:block` always shows them on desktop.
 - Upgrade sections are generated from `UPGRADE_ORDER` filtered by `category`. A new upgrade appears automatically in the matching section.
 
 ## Adding things
