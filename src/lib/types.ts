@@ -47,3 +47,10 @@ export interface OfflineReport {
 	elapsed: number;
 	earned: number;
 }
+
+export interface HarvestEvent {
+	cellId: string;
+	value: number;
+	/** True when a farmer harvested the plot rather than the player. */
+	auto: boolean;
+}

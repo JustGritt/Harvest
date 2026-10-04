@@ -95,6 +95,30 @@ describe('workers', () => {
 	});
 });
 
+describe('onHarvest', () => {
+	it('reports manual and farmer harvests until unsubscribed', () => {
+		const events: unknown[] = [];
+		const stop = gameStore.onHarvest((e) => events.push(e));
+		gameStore.plantCrop(0, 0);
+		gameStore.plantCrop(0, 1);
+		setNow(T0 + 3000);
+		gameStore.harvestCrop(0, 0);
+		state().upgrades.farmer = 1;
+		state().farmerProgress = 1;
+		gameStore.tick(T0 + 3000);
+		expect(events).toEqual([
+			{ cellId: '0-0', value: 10, auto: false },
+			{ cellId: '0-1', value: 10, auto: true }
+		]);
+
+		stop();
+		gameStore.plantCrop(0, 0);
+		setNow(T0 + 6000);
+		gameStore.harvestCrop(0, 0);
+		expect(events).toHaveLength(2);
+	});
+});
+
 describe('buyUpgrade', () => {
 	it('charges the cost and raises the level', () => {
 		state().money = 1000;

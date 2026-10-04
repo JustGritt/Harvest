@@ -2,7 +2,7 @@ import { get, writable } from 'svelte/store';
 import { BALANCE } from '$lib/data/balance';
 import { CROPS } from '$lib/data/crops';
 import { UPGRADES } from '$lib/data/upgrades';
-import type { Cell, CropId, GameState, OfflineReport, UpgradeId } from '$lib/types';
+import type { Cell, CropId, GameState, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 import {
 	farmerInterval,
 	fieldSize,
@@ -17,6 +17,9 @@ import {
 
 const SAVE_KEY = 'harvest-idle-save';
 const SAVE_VERSION = 1;
+
+// Harvest notifications for UI feedback. Not part of the saved state.
+const harvestListeners = new Set<(event: HarvestEvent) => void>();
 
 /** Fresh run. `carry` holds the fields that survive a prestige reset. */
 function createInitialState(
@@ -61,13 +64,14 @@ function plantCell(state: GameState, cell: Cell, now: number) {
 	cell.readyAt = now + growTime(state.selectedCrop, state.upgrades);
 }
 
-function harvestCell(state: GameState, cell: Cell) {
+function harvestCell(state: GameState, cell: Cell, auto: boolean) {
 	if (cell.status !== 'ready' || !cell.crop) return;
 	const value = harvestValue(cell.crop, state);
 	state.money += value;
 	state.runEarned += value;
 	state.lifetimeEarned += value;
 	state.totalHarvested++;
+	for (const listener of harvestListeners) listener({ cellId: cell.id, value, auto });
 	cell.status = 'empty';
 	cell.crop = null;
 	cell.plantedAt = null;
@@ -97,7 +101,7 @@ function step(state: GameState, now: number, dt: number) {
 		);
 		let i = 0;
 		while (state.farmerProgress >= 1 && i < ready.length) {
-			harvestCell(state, ready[i++]);
+			harvestCell(state, ready[i++], true);
 			state.farmerProgress--;
 		}
 	}
@@ -153,6 +157,14 @@ function createGameStore() {
 	return {
 		subscribe,
 
+		/** Calls `listener` on every harvest. Returns an unsubscribe function. */
+		onHarvest: (listener: (event: HarvestEvent) => void) => {
+			harvestListeners.add(listener);
+			return () => {
+				harvestListeners.delete(listener);
+			};
+		},
+
 		tick: (now = Date.now()) => {
 			update((state) => {
 				advance(state, now);
@@ -176,7 +188,7 @@ function createGameStore() {
 				if (cell.status === 'growing' && cell.readyAt !== null && Date.now() >= cell.readyAt) {
 					cell.status = 'ready';
 				}
-				harvestCell(state, cell);
+				harvestCell(state, cell, false);
 				return state;
 			});
 		},

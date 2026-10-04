@@ -5,7 +5,7 @@
 	import { CROPS, CROP_ORDER } from '$lib/data/crops';
 	import { UPGRADES, UPGRADE_ORDER, type UpgradeCategory } from '$lib/data/upgrades';
 	import UpgradeButton from '$lib/components/UpgradeButton.svelte';
-	import type { Cell, OfflineReport, UpgradeId } from '$lib/types';
+	import type { Cell, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 	import {
 		describeEffect,
 		farmerInterval,
@@ -35,6 +35,22 @@
 
 	let offline: OfflineReport | null = null;
 
+	// Floating "+N" pops shown over harvested plots
+	const POP_MS = 900;
+	const MAX_POPS = 30;
+	let pops: (HarvestEvent & { key: number })[] = [];
+	let nextPopKey = 0;
+
+	function addPop(event: HarvestEvent) {
+		// Under heavy automation, drop farmer pops rather than flood the DOM
+		if (event.auto && pops.length >= MAX_POPS) return;
+		const key = nextPopKey++;
+		pops = [...pops.slice(-(MAX_POPS - 1)), { ...event, key }];
+		setTimeout(() => {
+			pops = pops.filter((p) => p.key !== key);
+		}, POP_MS);
+	}
+
 	// Income/s averaged over the last 10s of run earnings
 	let samples: { t: number; earned: number }[] = [];
 	let incomePerSec = 0;
@@ -52,6 +68,8 @@
 	onMount(() => {
 		const report = gameStore.load();
 		if (report && report.earned > 0 && report.elapsed >= 60_000) offline = report;
+		// Subscribed after load so offline catch-up doesn't spawn pops
+		const stopPops = gameStore.onHarvest(addPop);
 
 		const tickInterval = setInterval(() => gameStore.tick(), BALANCE.tickMs);
 		const incomeInterval = setInterval(sampleIncome, 1000);
@@ -63,6 +81,7 @@
 		window.addEventListener('beforeunload', gameStore.save);
 
 		return () => {
+			stopPops();
 			clearInterval(tickInterval);
 			clearInterval(incomeInterval);
 			clearInterval(saveInterval);
@@ -154,11 +173,20 @@
 								></div>
 							</div>
 						{:else if cell.status === 'ready' && cell.crop}
-							<div class="text-3xl">{CROPS[cell.crop].icon}</div>
+							<div class="motion-safe:animate-ready text-3xl">{CROPS[cell.crop].icon}</div>
 							<div class="text-sm font-semibold">
 								+{formatNumber(harvestValue(cell.crop, game))}
 							</div>
 						{/if}
+						{#each pops.filter((p) => p.cellId === cell.id) as pop (pop.key)}
+							<span
+								class="motion-safe:animate-float-up motion-reduce:animate-fade-out pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 whitespace-nowrap {pop.auto
+									? 'text-xs text-gray-600'
+									: 'text-base font-bold text-green-800'}"
+							>
+								+{formatNumber(pop.value)}
+							</span>
+						{/each}
 					</button>
 				{/each}
 			{/each}
