@@ -6,7 +6,7 @@
 - **Tailwind CSS v4**, loaded through `@tailwindcss/vite` and `@import 'tailwindcss'` in `src/app.css`. There is no `tailwind.config.js`.
 - **TypeScript** everywhere, with strict types for all game state.
 - **Vite 6**, **yarn** (`yarn.lock`), and `@sveltejs/adapter-auto`.
-- Everything runs client-side. There is no backend and no test suite. Persistence uses `localStorage`.
+- Everything runs client-side, with no backend. Persistence uses `localStorage`. Unit tests use **Vitest** (`src/lib/**/*.test.ts`). A single Vite version is pinned through `resolutions` so `vitest/config` types match.
 
 ## File map
 
@@ -104,7 +104,10 @@ yarn build      # production build
 yarn check      # svelte-check type checking
 yarn lint       # prettier --check + eslint
 yarn format     # prettier --write
+yarn test       # unit tests (Vitest, src/**/*.test.ts)
 yarn sim        # balance simulation (add "active" for the clicks-only player)
 ```
+
+**CI** (`.github/workflows/ci.yml`) runs `check`, `lint`, `test` and `build` on every push to `main` and on every PR, and posts both `yarn sim` runs to the job summary so balance changes are visible in review.
 
 Prettier settings: tabs, single quotes, no trailing commas, print width 100.

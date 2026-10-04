@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+      - run: yarn check
+      - run: yarn lint
+      - run: yarn test
+      - run: yarn build
+
+      - name: Balance simulation summary
+        run: |
+          {
+            echo '## Balance simulation'
+            echo
+            for mode in mixed active; do
+              echo '```'
+              yarn -s sim "$mode"
+              echo '```'
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
