@@ -1,9 +1,58 @@
+@import '@fontsource-variable/fredoka';
 @import 'tailwindcss';
 
 @theme {
+	--font-display: 'Fredoka Variable', ui-rounded, system-ui, sans-serif;
+
+	/* Cozy farm palette. Components use these tokens, never raw Tailwind hues, so a dark theme
+	   only has to redefine them. */
+	--color-soil-50: #faf3ea;
+	--color-soil-100: #f0e2cf;
+	--color-soil-200: #e1c7a4;
+	--color-soil-300: #c9a274;
+	--color-soil-400: #ad7f4f;
+	--color-soil-500: #8e6238;
+	--color-soil-600: #734d2b;
+	--color-soil-700: #5a3b22;
+	--color-soil-800: #432c1a;
+	--color-soil-900: #2e1e12;
+
+	--color-leaf-50: #f2f8ea;
+	--color-leaf-100: #e2efd0;
+	--color-leaf-200: #c6e0a3;
+	--color-leaf-300: #a3cc72;
+	--color-leaf-400: #80b44c;
+	--color-leaf-500: #639a35;
+	--color-leaf-600: #4c7a28;
+	--color-leaf-700: #3c5f22;
+	--color-leaf-800: #314c1f;
+	--color-leaf-900: #29401c;
+
+	--color-parchment-50: #fffcf5;
+	--color-parchment-100: #fdf6e3;
+	--color-parchment-200: #f8ebc8;
+	--color-parchment-300: #f0dba3;
+
+	--color-wood-300: #d4a373;
+	--color-wood-400: #bc8a5f;
+	--color-wood-500: #9c6b43;
+	--color-wood-600: #7f5435;
+	--color-wood-700: #66432c;
+	--color-wood-800: #4f3423;
+	--color-wood-900: #3b271b;
+
+	--color-gold-100: #fff4c2;
+	--color-gold-200: #ffe58a;
+	--color-gold-300: #fcd34d;
+	--color-gold-400: #f5b91f;
+	--color-gold-500: #e09b0b;
+	--color-gold-600: #b77706;
+	--color-gold-700: #8f5a09;
+
 	--animate-float-up: float-up 0.9s ease-out forwards;
 	--animate-fade-out: fade-out 0.9s ease-out forwards;
 	--animate-ready: ready 1.4s ease-in-out infinite;
+	--animate-bump: bump 0.25s ease-out;
 
 	@keyframes float-up {
 		from {
@@ -34,4 +83,30 @@
 			transform: scale(1.12);
 		}
 	}
+
+	@keyframes bump {
+		50% {
+			transform: scale(1.08);
+		}
+	}
+}
+
+@layer base {
+	body {
+		color: var(--color-wood-900);
+	}
+
+	button:focus-visible,
+	textarea:focus-visible {
+		outline: 3px solid var(--color-gold-400);
+		outline-offset: 2px;
+	}
+}
+
+/* Soft meadow behind everything: two faint light spots over a grass gradient. */
+@utility bg-meadow {
+	background:
+		radial-gradient(circle at 15% 10%, rgb(255 255 255 / 0.35), transparent 40%),
+		radial-gradient(circle at 85% 90%, rgb(255 255 255 / 0.2), transparent 45%),
+		linear-gradient(var(--color-leaf-200), var(--color-leaf-300));
 }

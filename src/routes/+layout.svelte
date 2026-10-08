@@ -3,6 +3,10 @@
 	import '../app.css';
 </script>
 
-<main class="min-h-screen bg-green-50">
+<svelte:head>
+	<title>Harvest</title>
+</svelte:head>
+
+<main class="bg-meadow min-h-screen">
 	<slot />
 </main>

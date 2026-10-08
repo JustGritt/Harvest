@@ -5,6 +5,7 @@
 	import { CROPS, CROP_ORDER } from '$lib/data/crops';
 	import { UPGRADES, UPGRADE_ORDER, type UpgradeCategory } from '$lib/data/upgrades';
 	import UpgradeButton from '$lib/components/UpgradeButton.svelte';
+	import MoneyDisplay from '$lib/components/MoneyDisplay.svelte';
 	import type { Cell, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 	import {
 		describeEffect,
@@ -83,8 +84,11 @@
 	const MAX_POPS = 30;
 	let pops: (HarvestEvent & { key: number })[] = [];
 	let nextPopKey = 0;
+	/** Bumped on player harvests to replay the money animation. */
+	let moneyBump = 0;
 
 	function addPop(event: HarvestEvent) {
+		if (!event.auto) moneyBump++;
 		// Under heavy automation, drop farmer pops rather than flood the DOM
 		if (event.auto && pops.length >= MAX_POPS) return;
 		const key = nextPopKey++;
@@ -220,13 +224,19 @@
 	</div>
 {/if}
 
-<!-- Mobile money bar -->
-<div
-	class="sticky top-0 z-10 flex items-baseline justify-between border-b border-green-700 bg-green-100 px-3 py-2 lg:hidden"
+<!-- Top bar: title everywhere, plus money on mobile (desktop shows it in the sidebar) -->
+<header
+	class="border-wood-700 bg-wood-500 text-parchment-100 sticky top-0 z-10 flex items-center justify-between gap-3 border-b-4 px-3 py-1.5 shadow-md lg:static lg:px-4 lg:py-2"
 >
-	<h3 class="truncate text-lg font-bold">💰 {formatNumber(game.money)}</h3>
-	<p class="text-sm text-gray-600">≈ {formatNumber(incomePerSec)} / s</p>
-</div>
+	<h1
+		class="font-display flex items-center gap-1.5 text-xl font-semibold tracking-wide lg:text-2xl"
+	>
+		<span aria-hidden="true">🌾</span> Harvest
+	</h1>
+	<div class="bg-parchment-100 rounded-lg px-2.5 py-0.5 lg:hidden">
+		<MoneyDisplay money={game.money} {incomePerSec} bump={moneyBump} compact />
+	</div>
+</header>
 
 <section class="relative flex flex-col pb-16 lg:flex-row lg:pb-0">
 	<div class="flex-1 p-2 sm:p-4 lg:pr-0">
@@ -292,8 +302,7 @@
 			class="w-full space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-80 lg:overflow-y-auto lg:rounded lg:border lg:border-green-700 lg:bg-green-100 lg:p-4"
 		>
 			<div class="hidden lg:block">
-				<h3 class="truncate text-xl font-bold">💰 {formatNumber(game.money)}</h3>
-				<p class="text-sm text-gray-600">≈ {formatNumber(incomePerSec)} / s</p>
+				<MoneyDisplay money={game.money} {incomePerSec} bump={moneyBump} />
 			</div>
 
 			<div
