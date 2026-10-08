@@ -4,7 +4,7 @@
 
 ## How to Play
 
-1. **Click an empty plot** to plant your selected seed, and **click a ready plot** (it pulses) to harvest it.
+1. **Click an empty plot** to plant your selected seed, and **click a ready plot** (it glows gold) to harvest it.
 2. Spend your 💰 on **workers**: seed planters plant for you and farmers harvest for you. After a few minutes the farm runs itself.
 3. **Unlock slower crops** (🌾 → 🥕 → 🎃 → 🌻). They earn more per plot and far more per harvest.
 4. Buy **upgrades** to grow crops faster, raise their value, and expand the field up to 8×8.

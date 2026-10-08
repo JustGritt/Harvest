@@ -5,6 +5,7 @@
 	import { CROPS, CROP_ORDER } from '$lib/data/crops';
 	import { UPGRADES, UPGRADE_ORDER, type UpgradeCategory } from '$lib/data/upgrades';
 	import BuyButton from '$lib/components/BuyButton.svelte';
+	import Dialog from '$lib/components/Dialog.svelte';
 	import Panel from '$lib/components/Panel.svelte';
 	import MoneyDisplay from '$lib/components/MoneyDisplay.svelte';
 	import Plot from '$lib/components/Plot.svelte';
@@ -93,6 +94,14 @@
 
 	let offline: OfflineReport | null = null;
 
+	// Dialog buttons
+	const BTN = 'rounded-lg border-2 px-3 py-1.5 font-semibold transition';
+	const BTN_PLAIN = 'border-soil-200 bg-parchment-50 text-wood-700 hover:bg-parchment-200';
+	const BTN_LEAF = 'border-leaf-700 bg-leaf-500 text-white hover:bg-leaf-600';
+	const BTN_GOLD = 'border-gold-600 bg-gold-400 text-wood-900 hover:bg-gold-300';
+	const BTN_WOOD = 'border-wood-700 bg-wood-500 text-white hover:bg-wood-600';
+	const BTN_DANGER = 'border-berry-700 bg-berry-500 text-white hover:bg-berry-600';
+
 	// Floating "+N" pops shown over harvested plots
 	const POP_MS = 900;
 	const MAX_POPS = 30;
@@ -165,20 +174,17 @@
 		return !requires || game.upgrades[requires] > 0;
 	}
 
+	// Which confirmation dialog is open
+	let confirming: 'sell' | 'reset' | 'import' | null = null;
+
 	function sellFarm() {
-		if (
-			confirm(
-				`Sell the farm for ${gain} 🌟 legacy seed${gain === 1 ? '' : 's'}? Money, upgrades and crops reset.`
-			)
-		) {
-			gameStore.prestige();
-		}
+		confirming = null;
+		gameStore.prestige();
 	}
 
 	function hardReset() {
-		if (confirm('Delete your save and start over from scratch? This cannot be undone.')) {
-			gameStore.hardReset();
-		}
+		confirming = null;
+		gameStore.hardReset();
 	}
 
 	// Save transfer between browsers
@@ -196,14 +202,16 @@
 		}
 	}
 
-	function importSave() {
+	function askImport() {
 		if (!transferText.trim()) {
 			transferStatus = { ok: false, message: 'Paste an exported save first.' };
 			return;
 		}
-		if (!confirm('Replace your current game with this save? Your current progress will be lost.')) {
-			return;
-		}
+		confirming = 'import';
+	}
+
+	function importSave() {
+		confirming = null;
 		if (gameStore.importSave(transferText)) {
 			gameStore.save();
 			transferText = '';
@@ -214,24 +222,70 @@
 	}
 </script>
 
-{#if offline}
-	<div
-		class="mx-2 mt-2 flex items-center justify-between gap-4 rounded border border-green-700 bg-yellow-50 p-3 sm:mx-4 sm:mt-4"
-	>
-		<span>
-			While you were away for <b>{formatDuration(offline.elapsed)}</b>, your farm earned
-			<b>{formatNumber(offline.earned)} 💰</b>.
-			{#if offline.elapsed > BALANCE.maxOfflineMs}
-				<span class="text-sm text-gray-600"
-					>(Offline progress is capped at {formatDuration(BALANCE.maxOfflineMs)}.)</span
-				>
-			{/if}
-		</span>
-		<button class="rounded px-2 text-gray-600 hover:bg-yellow-100" on:click={() => (offline = null)}
-			>✕</button
-		>
-	</div>
-{/if}
+<Dialog open={offline !== null} title="Welcome back!" icon="🌅" on:close={() => (offline = null)}>
+	{#if offline}
+		<p>While you were away for <b>{formatDuration(offline.elapsed)}</b>, your farm earned</p>
+		<p class="font-display text-gold-700 text-center text-3xl font-semibold tabular-nums">
+			+{formatNumber(offline.earned)} 💰
+		</p>
+		{#if offline.elapsed > BALANCE.maxOfflineMs}
+			<p class="text-wood-600 text-xs">
+				Offline progress is capped at {formatDuration(BALANCE.maxOfflineMs)}.
+			</p>
+		{/if}
+	{/if}
+	<button slot="actions" class="{BTN} {BTN_LEAF}" on:click={() => (offline = null)}>Collect</button>
+</Dialog>
+
+<Dialog
+	open={confirming === 'sell'}
+	title="Sell the farm?"
+	icon="🌟"
+	on:close={() => (confirming = null)}
+>
+	<p>
+		You get <b>+{gain} 🌟 legacy seed{gain === 1 ? '' : 's'}</b>, for
+		<b>+{Math.round((game.legacySeeds + gain) * BALANCE.legacySeedBonus * 100)}%</b> income in every
+		future run.
+	</p>
+	<ul class="list-inside list-disc space-y-0.5">
+		<li><b>Resets:</b> money, upgrades, unlocked crops and the field.</li>
+		<li><b>Keeps:</b> legacy seeds and lifetime stats.</li>
+	</ul>
+	<svelte:fragment slot="actions">
+		<button class="{BTN} {BTN_PLAIN}" on:click={() => (confirming = null)}>Cancel</button>
+		<button class="{BTN} {BTN_GOLD}" on:click={sellFarm}>Sell for +{gain} 🌟</button>
+	</svelte:fragment>
+</Dialog>
+
+<Dialog
+	open={confirming === 'reset'}
+	title="Reset your save?"
+	icon="⚠️"
+	on:close={() => (confirming = null)}
+>
+	<p>
+		This deletes everything, legacy seeds included, and starts over from scratch. It can't be
+		undone.
+	</p>
+	<svelte:fragment slot="actions">
+		<button class="{BTN} {BTN_PLAIN}" on:click={() => (confirming = null)}>Cancel</button>
+		<button class="{BTN} {BTN_DANGER}" on:click={hardReset}>Delete save</button>
+	</svelte:fragment>
+</Dialog>
+
+<Dialog
+	open={confirming === 'import'}
+	title="Import this save?"
+	icon="📥"
+	on:close={() => (confirming = null)}
+>
+	<p>It replaces your current game. Your current progress will be lost.</p>
+	<svelte:fragment slot="actions">
+		<button class="{BTN} {BTN_PLAIN}" on:click={() => (confirming = null)}>Cancel</button>
+		<button class="{BTN} {BTN_WOOD}" on:click={importSave}>Import</button>
+	</svelte:fragment>
+</Dialog>
 
 <!-- Top bar: title everywhere, plus money on mobile (desktop shows it in the sidebar) -->
 <header
@@ -253,6 +307,14 @@
 	class="relative flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:flex-row lg:pb-0"
 >
 	<div class="flex-1 p-2 sm:p-4 lg:pr-0">
+		{#if game.totalHarvested === 0 && game.prestigeCount === 0}
+			<p
+				class="border-wood-600 bg-parchment-100 mx-auto mb-2 max-w-3xl rounded-lg border-2 px-3 py-1.5 text-center text-sm shadow-sm"
+			>
+				👆 Tap an empty plot to plant {CROPS[game.selectedCrop].name.toLowerCase()}, then tap it
+				again when it glows to harvest.
+			</p>
+		{/if}
 		<!-- Wooden frame around the field -->
 		<div
 			class="border-wood-700 bg-soil-800 mx-auto grid max-w-3xl gap-1 rounded-xl border-4 p-1 shadow-lg sm:gap-2 sm:rounded-2xl sm:p-2"
@@ -393,7 +455,7 @@
 					<button
 						class="font-display border-gold-600 bg-gold-400 text-wood-900 hover:bg-gold-300 disabled:border-soil-200 disabled:bg-parchment-50 disabled:text-wood-600 w-full rounded-lg border-2 px-3 py-2 text-lg font-semibold shadow-[0_3px_0_var(--color-gold-600)] transition active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:shadow-none"
 						disabled={gain < 1}
-						on:click={sellFarm}
+						on:click={() => (confirming = 'sell')}
 					>
 						Sell farm for +{gain} 🌟
 					</button>
@@ -441,7 +503,7 @@
 						</button>
 						<button
 							class="border-berry-500 text-berry-600 hover:bg-berry-100 rounded-md border-2 px-2 py-1 font-semibold"
-							on:click={hardReset}>Reset save</button
+							on:click={() => (confirming = 'reset')}>Reset save</button
 						>
 					</div>
 					{#if showTransfer}
@@ -460,7 +522,7 @@
 								>
 								<button
 									class="bg-wood-500 hover:bg-wood-600 flex-1 rounded-md px-2 py-1 text-xs font-semibold text-white"
-									on:click={importSave}>Import</button
+									on:click={askImport}>Import</button
 								>
 							</div>
 							{#if transferStatus}

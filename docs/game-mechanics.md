@@ -83,7 +83,7 @@ Farmers harvest instantly, so plots never sit in a "harvesting" state.
 - **Saving.** The full state goes to `localStorage` under `harvest-idle-save` every 5 s, whenever the tab is hidden, and on unload.
 - **Loading.** The save is loaded on mount. Saves are versioned (`version: 1`). A save with a different version or invalid JSON is ignored and the game starts fresh. Fields missing from older saves are filled with defaults.
 - **Offline progress.** On load, the time since `lastTick` is simulated in the same 1 s steps, up to **8 hours**. If you were away for at least a minute and earned something, a banner shows the duration and earnings. Because offline steps are 1 s long, very fast crops (well under 1 s) earn a little less offline than they would live.
-- **Export / import.** The Stats panel can export the save as a base64 string (copied to the clipboard) and import one, after asking for confirmation. Imports are validated the same way as loads, and an invalid string leaves the game untouched. An imported save earns no offline progress; its clock restarts at the moment of import.
+- **Export / import.** The Stats panel can export the save as a base64 string (copied to the clipboard) and import one, after a confirmation dialog. Imports are validated the same way as loads, and an invalid string leaves the game untouched. An imported save earns no offline progress; its clock restarts at the moment of import.
 
 ## Prestige (Legacy)
 

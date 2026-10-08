@@ -12,7 +12,7 @@
 
 ```
 src/
-├── app.html, app.css, app.d.ts     SvelteKit shell, Tailwind entry, ambient types
+├── app.html, app.css, app.d.ts     SvelteKit shell, Tailwind entry + palette tokens + animations, ambient types
 ├── lib/
 │   ├── types.ts                    GameState, Cell, CropId, UpgradeId, OfflineReport
 │   ├── data/
@@ -23,11 +23,12 @@ src/
 │   ├── store.ts                    gameStore: state, simulation step, actions, save/load
 │   └── components/
 │       ├── BuyButton.svelte        Purchase row for upgrades and crop unlocks (affordability fill, MAX)
+│       ├── Dialog.svelte           Modal on native <dialog> (confirmations, welcome back)
 │       ├── MoneyDisplay.svelte     Money + income/s, bumps on player harvests
 │       ├── Panel.svelte            Parchment card with a wood header strip
 │       └── Plot.svelte             One field plot: soil, growth stage, ready glow, harvest pops
 └── routes/
-    ├── +layout.svelte              Imports app.css; green full-height <main>
+    ├── +layout.svelte              Imports app.css, sets <title>; meadow-background <main>
     ├── +page.ts                    ssr = false (state comes from localStorage)
     ├── +page.svelte                Game UI: field grid, sidebar, game loop, autosave
     └── emb/                        Experimental third-party embed page (markspot.app), not part of the game
@@ -74,15 +75,26 @@ data/*.ts ──▶ utils/gameUtils.ts (formulas) ──▶ store.ts (state + ac
 ## UI (`src/routes/+page.svelte`)
 
 - Reads `$gameStore` reactively. `now` is `game.lastTick`, so progress bars move with the 100 ms tick.
-- `onMount` loads the save (and shows the offline banner), starts the tick, an income sampler that tracks a rolling 10 s average, and autosave. It also saves on `visibilitychange` and `beforeunload`.
+- `onMount` loads the save (and opens the welcome-back dialog), starts the tick, an income sampler that tracks a rolling 10 s average, and autosave. It also saves on `visibilitychange` and `beforeunload`.
 - Layout, desktop (`lg` and up):
   - **Left:** the plot grid, at most `max-w-3xl` wide with square cells.
-  - **Right:** a sticky sidebar that scrolls on its own, with money and income/s, then _Seeds_, _Workers_, _Growth & Value_, _Field_, _🌟 Legacy_ (once it's relevant), and _Stats_ (which includes Export / import and Reset save).
+  - A wood header with the title.
+  - **Left:** the plot grid in a wooden frame, at most `max-w-3xl` wide with square cells. Until the first harvest, a hint above it explains planting and harvesting.
+  - **Right:** a sticky sidebar that scrolls on its own, with money and income/s, then _Seeds_, _Workers_, _Growth & Value_, _Field_, _🌟 Legacy_ (once it's relevant), and _Stats_ (which includes a _Save_ section with Export / import and Reset save).
 - Layout, mobile (below `lg`):
-  - A sticky money bar on top, and the field at full width. An 8×8 field fits a 375px screen at about 41px per plot. Text labels are hidden below `sm`, leaving icons and progress bars.
-  - A fixed bottom tab bar (Seeds / Upgrades / Legacy / Stats). Tapping a tab opens that panel in a bottom sheet (`max-h-[40vh]`) so the field stays visible. Tapping the tab again closes it. A dot on a tab means something in it is affordable.
-  - Panels are rendered once. `panelVisibility(tab, activeTab)` hides them on mobile unless their tab is open, and `lg:block` always shows them on desktop.
+  - A sticky header with the title and money on top, and the field at full width. An 8×8 field fits a 375px screen at about 41px per plot. Text labels are hidden below `sm`, leaving icons and progress bars.
+  - A fixed bottom tab bar (Seeds / Upgrades / Legacy / Stats). Tapping a tab slides that panel up in a bottom sheet (`max-h-[50vh]`) so the field stays visible. Tapping the tab again, the ✕, or Escape closes it. A gold dot on a tab means something in it is affordable. Bottom bars pad for `env(safe-area-inset-bottom)`.
+  - Panels are rendered once. `panelVisibility(tab, sheetTab)` hides them on mobile unless their tab is in the sheet, and `lg:block` always shows them on desktop. `sheetTab` keeps the last tab rendered while the sheet slides closed.
 - Upgrade sections are generated from `UPGRADE_ORDER` filtered by `category`. A new upgrade appears automatically in the matching section.
+- Selling the farm, resetting and importing confirm through `Dialog` (one `confirming` state), never `confirm()`.
+
+### Visual style
+
+- Cozy farm look, emoji as icons. Colours are `@theme` tokens in `src/app.css`: `soil` (plots), `leaf` (affordable actions), `parchment` (panels), `wood` (headers, borders, bars), `gold` (money, ready crops, selection, Legacy) and `berry` (danger). Use the tokens, not raw Tailwind hues, so a dark theme only has to redefine them.
+- `font-display` (Fredoka, self-hosted through fontsource) for titles and big numbers. Numbers that change use `tabular-nums`.
+- Custom utilities: `bg-meadow` (page background), `soil-dry` / `soil-wet` (empty and planted plots).
+- Purchases use `BuyButton`: leaf green when affordable, a gold fill toward the cost when not, a MAX badge when maxed.
+- Per-crop colour comes from `CropDef.tint`.
 
 ## Adding things
 
