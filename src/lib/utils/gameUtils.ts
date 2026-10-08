@@ -67,10 +67,18 @@ export function growProgress(cell: Cell, now: number): number {
 	return Math.min(1, Math.max(0, (now - cell.plantedAt) / total));
 }
 
-/** How a growing crop is drawn: a sprout for the first half, then the crop scaling up to full size. */
-export function growStage(progress: number): { sprout: boolean; scale: number } {
-	if (progress < 0.5) return { sprout: true, scale: 1 };
-	return { sprout: false, scale: 0.6 + 0.4 * Math.min(1, (progress - 0.5) / 0.5) };
+export type GrowStage = 'seed' | 'sprout' | 'young';
+
+/**
+ * How a growing crop is drawn: a seed mound just after planting, then a sprout, then the young
+ * crop. Within the sprout and young stages the sprite grows from 85% to full size.
+ */
+export function growStage(progress: number): { stage: GrowStage; scale: number } {
+	const grow = (from: number, to: number) =>
+		0.85 + 0.15 * Math.min(1, (progress - from) / (to - from));
+	if (progress < 0.15) return { stage: 'seed', scale: 1 };
+	if (progress < 0.5) return { stage: 'sprout', scale: grow(0.15, 0.5) };
+	return { stage: 'young', scale: grow(0.5, 1) };
 }
 
 export function harvestValue(crop: CropId, state: Pick<GameState, 'upgrades' | 'legacySeeds'>) {

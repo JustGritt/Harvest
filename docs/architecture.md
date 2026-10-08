@@ -26,7 +26,7 @@ src/
 │       ├── Dialog.svelte           Modal on native <dialog> (confirmations, welcome back)
 │       ├── MoneyDisplay.svelte     Money + income/s, bumps on player harvests
 │       ├── Panel.svelte            Parchment card with a wood header strip
-│       └── Plot.svelte             One field plot: soil, growth stage, ready glow, harvest pops
+│       └── Plot.svelte             One field plot: soil tile, growth-stage sprite, ready glow, harvest pops
 └── routes/
     ├── +layout.svelte              Imports app.css, sets <title>; meadow-background <main>
     ├── +page.ts                    ssr = false (state comes from localStorage)
@@ -79,7 +79,7 @@ data/*.ts ──▶ utils/gameUtils.ts (formulas) ──▶ store.ts (state + ac
 - Layout, desktop (`lg` and up):
   - **Left:** the plot grid, at most `max-w-3xl` wide with square cells.
   - A wood header with the title.
-  - **Left:** the plot grid in a wooden frame, at most `max-w-3xl` wide with square cells. Until the first harvest, a hint above it explains planting and harvesting.
+  - **Left:** the plot grid inside a fence (`fence-frame.svg` as a 9-slice `border-image`), at most `max-w-3xl` wide with square cells. Until the first harvest, a hint above it explains planting and harvesting.
   - **Right:** a sticky sidebar that scrolls on its own, with money and income/s, then _Seeds_, _Workers_, _Growth & Value_, _Field_, _🌟 Legacy_ (once it's relevant), and _Stats_ (which includes a _Save_ section with Export / import and Reset save).
 - Layout, mobile (below `lg`):
   - A sticky header with the title and money on top, and the field at full width. An 8×8 field fits a 375px screen at about 41px per plot. Text labels are hidden below `sm`, leaving icons and progress bars.
@@ -106,7 +106,7 @@ data/*.ts ──▶ utils/gameUtils.ts (formulas) ──▶ store.ts (state + ac
 4. Add a `case` to `describeEffect()`. TypeScript will complain until you do.
 5. Run `yarn sim` and update `docs/game-mechanics.md`.
 
-**A new crop:** add it to `CropId`, `CROPS` and `CROP_ORDER`. The UI and planters pick it up automatically.
+**A new crop:** add it to `CropId`, `CROPS` and `CROP_ORDER`, and draw its sprout, young and mature sprites (see `docs/art-style.md`). The UI and planters pick it up automatically.
 
 Old saves load fine after either change, because `hydrate()` fills in defaults.
 

@@ -43,15 +43,16 @@ Only the `@theme` token colours in `src/app.css` plus the extra hues in `src/lib
 
 1. Draw `src/lib/art/svg/<family>/<name>.svg` following the rules above.
 2. Add `<name>` to `ART_IDS` in `src/lib/art/ids.ts`.
-3. Run `yarn test` (manifest, canvas and palette checks) and look at it on the dev-only contact sheet at `/art`, at 24 to 96px over parchment, soil and wood.
+3. For a new crop, also draw `<crop>-sprout`, `<crop>-young` and `<crop>-mature`. `cropArt()` in `ids.ts` won't type-check until they're in `ART_IDS`.
+4. Run `yarn test` (manifest, canvas and palette checks) and look at it on the dev-only contact sheet at `/art`, at 24 to 96px over parchment, soil and wood.
 
 ## Manifest
 
-| Family   | Sprites                                                     |
-| -------- | ----------------------------------------------------------- |
-| crops    | `seed-mound`, `wheat-sprout`, `wheat-young`, `wheat-mature` |
-| field    | `soil-dry`, `soil-wet`                                      |
-| workers  | `farmer`                                                    |
-| currency | `coin`                                                      |
+| Family   | Sprites                                                                                                                                 |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| crops    | `seed-mound` (every crop's first stage), then `<crop>-sprout`, `<crop>-young`, `<crop>-mature` for wheat, carrot, pumpkin and sunflower |
+| field    | `soil-dry`, `soil-wet` (32×32 tiles), `fence-frame` (9-slice border: 12-unit bands, posts at corners and mid-edge so they repeat)       |
+| workers  | `farmer`                                                                                                                                |
+| currency | `coin`                                                                                                                                  |
 
 All sprites are original work made for this repository and share its license.

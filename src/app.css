@@ -115,15 +115,6 @@
 	}
 }
 
-/* Tilled plots: furrows over soil. Dry while empty, darker and moist once planted. */
-@utility soil-dry {
-	background: repeating-linear-gradient(var(--color-soil-300) 0 7px, var(--color-soil-400) 7px 9px);
-}
-
-@utility soil-wet {
-	background: repeating-linear-gradient(var(--color-soil-500) 0 7px, var(--color-soil-600) 7px 9px);
-}
-
 /* Soft meadow behind everything: two faint light spots over a grass gradient. */
 @utility bg-meadow {
 	background:

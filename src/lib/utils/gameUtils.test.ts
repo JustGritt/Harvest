@@ -69,10 +69,12 @@ describe('growProgress / growStage', () => {
 		expect(growProgress(createCell(0, 0), 5000)).toBe(0);
 	});
 
-	it('shows a sprout first, then the crop growing to full size', () => {
-		expect(growStage(0.2)).toEqual({ sprout: true, scale: 1 });
-		expect(growStage(0.5)).toEqual({ sprout: false, scale: 0.6 });
-		expect(growStage(1)).toEqual({ sprout: false, scale: 1 });
+	it('goes seed, sprout, young, growing within each stage', () => {
+		expect(growStage(0)).toEqual({ stage: 'seed', scale: 1 });
+		expect(growStage(0.15)).toEqual({ stage: 'sprout', scale: 0.85 });
+		expect(growStage(0.5)).toEqual({ stage: 'young', scale: 0.85 });
+		expect(growStage(0.75).scale).toBeCloseTo(0.925);
+		expect(growStage(1)).toEqual({ stage: 'young', scale: 1 });
 	});
 });
 

@@ -9,6 +9,7 @@
 	import Panel from '$lib/components/Panel.svelte';
 	import MoneyDisplay from '$lib/components/MoneyDisplay.svelte';
 	import Plot from '$lib/components/Plot.svelte';
+	import fenceFrame from '$lib/art/svg/field/fence-frame.svg?url';
 	import type { Cell, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 	import {
 		cropRate,
@@ -315,10 +316,10 @@
 				again when it glows to harvest.
 			</p>
 		{/if}
-		<!-- Wooden frame around the field -->
+		<!-- Fence around the field (9-slice border image) -->
 		<div
-			class="border-wood-700 bg-soil-800 mx-auto grid max-w-3xl gap-1 rounded-xl border-4 p-1 shadow-lg sm:gap-2 sm:rounded-2xl sm:p-2"
-			style="grid-template-columns: repeat({cols}, minmax(0, 1fr));"
+			class="bg-soil-800 mx-auto grid max-w-3xl gap-1 border-[14px] bg-clip-padding p-1 sm:gap-2 sm:border-[22px] sm:p-1.5"
+			style="grid-template-columns: repeat({cols}, minmax(0, 1fr)); border-image: url(&quot;{fenceFrame}&quot;) 12 round;"
 		>
 			{#each game.field as row, r (r)}
 				{#each row as cell, c (cell.id)}

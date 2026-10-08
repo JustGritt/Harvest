@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Art from '$lib/art/Art.svelte';
+	import { cropArt } from '$lib/art/ids';
+	import soilDry from '$lib/art/svg/field/soil-dry.svg?url';
+	import soilWet from '$lib/art/svg/field/soil-wet.svg?url';
 	import { CROPS } from '$lib/data/crops';
 	import type { Cell, CropId, HarvestEvent } from '$lib/types';
 	import { formatNumber, growProgress, growStage } from '$lib/utils/gameUtils';
@@ -15,38 +19,41 @@
 	$: progress = growProgress(cell, now);
 	$: stage = growStage(progress);
 	$: ready = cell.status === 'ready';
+	$: soil = cell.status === 'empty' ? soilDry : soilWet;
 </script>
 
 <button
-	class="group border-soil-800/50 relative flex aspect-square touch-manipulation items-center justify-center overflow-hidden rounded-md border-2 pb-1.5 shadow-[inset_0_-3px_0_rgb(0_0_0/0.15)] select-none hover:brightness-110 sm:rounded-lg sm:pb-2 {cell.status ===
-	'empty'
-		? 'soil-dry'
-		: 'soil-wet'} {ready
+	class="group border-soil-800/50 relative flex aspect-square touch-manipulation items-center justify-center overflow-hidden rounded-md border-2 pb-1.5 shadow-[inset_0_-3px_0_rgb(0_0_0/0.15)] select-none hover:brightness-110 sm:rounded-lg sm:pb-2 {ready
 		? 'border-gold-300 shadow-[0_0_12px_var(--color-gold-300),inset_0_0_10px_rgb(255_229_138/0.5)]'
 		: ''}"
+	style={`background: url("${soil}") 0 0 / 28px`}
 	aria-label={crop
 		? `${crop.name}, ${cell.status}`
 		: `Empty plot, plant ${CROPS[selectedCrop].name}`}
 	on:click
 >
 	{#if cell.status === 'empty'}
-		<span
-			class="text-lg opacity-0 transition-opacity group-hover:opacity-50 sm:text-3xl"
-			aria-hidden="true">{CROPS[selectedCrop].icon}</span
-		>
+		<Art
+			id={cropArt(selectedCrop, 'mature')}
+			size="70%"
+			class="opacity-0 transition-opacity group-hover:opacity-50"
+		/>
 	{:else if crop}
 		{#key cell.plantedAt}
 			<span
-				class="text-lg drop-shadow-sm sm:text-3xl {ready
+				class="flex size-[78%] items-end justify-center {ready
 					? 'motion-safe:animate-ready'
 					: 'motion-safe:animate-plant'}"
-				aria-hidden="true"
 			>
 				<span
-					class="inline-block transition-transform duration-300"
-					style="transform: scale({ready ? 1.1 : stage.scale})"
+					class="block size-full origin-bottom transition-transform duration-300"
+					style="transform: scale({ready ? 1.05 : stage.scale})"
 				>
-					{ready || !stage.sprout ? crop.icon : '🌱'}
+					<Art
+						id={cropArt(crop.id, ready ? 'mature' : stage.stage)}
+						size="100%"
+						class="drop-shadow-[0_2px_1px_rgb(0_0_0/0.25)]"
+					/>
 				</span>
 			</span>
 		{/key}

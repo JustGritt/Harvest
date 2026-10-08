@@ -3,6 +3,7 @@
 	import { ART_IDS } from '$lib/art/ids';
 	import soilDry from '$lib/art/svg/field/soil-dry.svg?url';
 	import soilWet from '$lib/art/svg/field/soil-wet.svg?url';
+	import fenceFrame from '$lib/art/svg/field/fence-frame.svg?url';
 
 	const SIZES = [24, 40, 64, 96];
 	const BACKGROUNDS = [
@@ -11,7 +12,7 @@
 		{ name: 'wet soil', style: `background: url("${soilWet}") 0 0 / 28px` },
 		{ name: 'wood', style: 'background: var(--color-wood-500)' }
 	];
-	const sprites = ART_IDS.filter((id) => !id.startsWith('soil-'));
+	const sprites = ART_IDS.filter((id) => !id.startsWith('soil-') && id !== 'fence-frame');
 </script>
 
 <div class="space-y-6 p-4">
@@ -56,5 +57,16 @@
 				></div>
 			</div>
 		{/each}
+		<div class="space-y-1">
+			<p class="font-mono text-xs">fence 9-slice, 12px and 16px</p>
+			<div
+				class="bg-soil-800 h-24 w-56 border-[12px] bg-clip-padding"
+				style={`border-image: url("${fenceFrame}") 12 round`}
+			></div>
+			<div
+				class="bg-soil-800 h-32 w-72 border-[16px] bg-clip-padding"
+				style={`border-image: url("${fenceFrame}") 12 round`}
+			></div>
+		</div>
 	</section>
 </div>
