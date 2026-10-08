@@ -78,9 +78,17 @@
 		{ id: 'stats', label: 'Stats', icon: '📊', alert: false }
 	];
 
-	/** Hidden on mobile unless its tab is open; always shown on desktop. */
-	function panelVisibility(tab: Tab, active: Tab | null) {
-		return `${active === tab ? '' : 'hidden'} lg:block`;
+	// The last opened tab stays rendered while the sheet slides closed
+	let sheetTab: Tab | null = null;
+	$: if (activeTab) sheetTab = activeTab;
+
+	/** Hidden on mobile unless its tab is in the sheet; always shown on desktop. */
+	function panelVisibility(tab: Tab, shown: Tab | null) {
+		return `${shown === tab ? '' : 'hidden'} lg:block`;
+	}
+
+	function onKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') activeTab = null;
 	}
 
 	let offline: OfflineReport | null = null;
@@ -239,7 +247,11 @@
 	</div>
 </header>
 
-<section class="relative flex flex-col pb-16 lg:flex-row lg:pb-0">
+<svelte:window on:keydown={onKeydown} />
+
+<section
+	class="relative flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:flex-row lg:pb-0"
+>
 	<div class="flex-1 p-2 sm:p-4 lg:pr-0">
 		<!-- Wooden frame around the field -->
 		<div
@@ -264,11 +276,23 @@
 	<!-- Desktop: sticky sidebar. Mobile: bottom sheet above the tab bar, open only when a tab is. -->
 	<section
 		class="{activeTab
-			? 'block'
-			: 'hidden'} border-wood-600 bg-parchment-200 fixed inset-x-0 bottom-14 z-20 max-h-[45vh] overflow-y-auto rounded-t-2xl border-t-4 p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.15)] lg:static lg:block lg:max-h-none lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-4 lg:shadow-none"
+			? 'translate-y-0'
+			: 'invisible translate-y-full'} border-wood-600 bg-parchment-200 fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 flex max-h-[50vh] flex-col rounded-t-2xl border-t-4 shadow-[0_-4px_12px_rgba(0,0,0,0.15)] transition-[translate,visibility] duration-300 ease-out motion-reduce:transition-none lg:visible lg:static lg:block lg:max-h-none lg:translate-y-0 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-4 lg:shadow-none"
 	>
+		<!-- Mobile sheet header: grab handle and close button -->
+		<div class="relative flex h-8 shrink-0 items-center justify-end px-2 lg:hidden">
+			<span
+				class="bg-wood-400 absolute top-2 left-1/2 h-1.5 w-12 -translate-x-1/2 rounded-full"
+				aria-hidden="true"
+			></span>
+			<button
+				class="text-wood-700 hover:bg-parchment-300 grid size-8 place-items-center rounded-full"
+				aria-label="Close"
+				on:click={() => (activeTab = null)}>✕</button
+			>
+		</div>
 		<div
-			class="w-full space-y-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-80 lg:overflow-y-auto lg:pb-1"
+			class="min-h-0 w-full space-y-3 overflow-y-auto px-3 pb-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-80 lg:px-0 lg:pb-1"
 		>
 			<div
 				class="border-wood-600 bg-parchment-100 hidden rounded-xl border-2 px-3 py-2 shadow-md lg:block"
@@ -276,7 +300,7 @@
 				<MoneyDisplay money={game.money} {incomePerSec} bump={moneyBump} />
 			</div>
 
-			<Panel title="Seeds" icon="🌾" class={panelVisibility('seeds', activeTab)}>
+			<Panel title="Seeds" icon="🌾" class={panelVisibility('seeds', sheetTab)}>
 				{#each CROP_ORDER as id (id)}
 					{@const crop = CROPS[id]}
 					{@const selected = game.selectedCrop === id}
@@ -324,7 +348,7 @@
 				</p>
 			</Panel>
 
-			<div class="{panelVisibility('upgrades', activeTab)} space-y-3">
+			<div class="{panelVisibility('upgrades', sheetTab)} space-y-3">
 				{#each SECTIONS as section (section.category)}
 					<Panel title={section.title} icon={section.icon}>
 						{#each UPGRADE_ORDER.filter((id) => UPGRADES[id].category === section.category && isVisible(id)) as id (id)}
@@ -347,7 +371,7 @@
 			</div>
 
 			{#if showPrestige}
-				<Panel title="Legacy" icon="🌟" accent="gold" class={panelVisibility('legacy', activeTab)}>
+				<Panel title="Legacy" icon="🌟" accent="gold" class={panelVisibility('legacy', sheetTab)}>
 					<p class="text-sm">
 						<b class="font-display text-base">{game.legacySeeds} 🌟</b> legacy seeds give
 						<b>+{Math.round(game.legacySeeds * BALANCE.legacySeedBonus * 100)}%</b> income.
@@ -376,7 +400,7 @@
 				</Panel>
 			{/if}
 
-			<Panel title="Stats" icon="📊" class="{panelVisibility('stats', activeTab)} text-sm">
+			<Panel title="Stats" icon="📊" class="{panelVisibility('stats', sheetTab)} text-sm">
 				<dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 tabular-nums">
 					<dt>Farmers</dt>
 					<dd class="font-semibold">
@@ -458,22 +482,23 @@
 
 <!-- Mobile tab bar -->
 <nav
-	class="fixed inset-x-0 bottom-0 z-30 flex h-14 border-t border-green-700 bg-white lg:hidden"
+	class="border-wood-700 bg-wood-500 fixed inset-x-0 bottom-0 z-30 flex gap-1 border-t-4 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_8px_rgba(0,0,0,0.2)] lg:hidden"
 	aria-label="Shop"
 >
 	{#each tabs as tab (tab.id)}
+		{@const active = activeTab === tab.id}
 		<button
-			class="relative flex flex-1 flex-col items-center justify-center text-xs"
-			class:bg-green-100={activeTab === tab.id}
-			class:font-bold={activeTab === tab.id}
-			aria-pressed={activeTab === tab.id}
-			on:click={() => (activeTab = activeTab === tab.id ? null : tab.id)}
+			class="relative my-1 flex h-12 flex-1 flex-col items-center justify-center rounded-xl text-xs font-semibold transition-colors {active
+				? 'bg-parchment-100 text-wood-900 shadow-inner'
+				: 'text-parchment-100 hover:bg-wood-600'}"
+			aria-pressed={active}
+			on:click={() => (activeTab = active ? null : tab.id)}
 		>
-			<span class="text-lg leading-none">{tab.icon}</span>
+			<span class="text-lg leading-none" aria-hidden="true">{tab.icon}</span>
 			{tab.label}
 			{#if tab.alert}
 				<span
-					class="absolute top-1.5 right-1/4 h-2 w-2 rounded-full bg-orange-500"
+					class="bg-gold-300 ring-wood-500 absolute top-1 right-1/4 size-2.5 rounded-full ring-2 motion-safe:animate-pulse"
 					aria-hidden="true"
 				></span>
 			{/if}
