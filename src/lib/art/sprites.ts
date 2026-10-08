@@ -18,9 +18,13 @@ export const ART_SOURCES: Record<string, string> = Object.fromEntries(
 );
 
 export function toSymbol(name: string, svg: string): string {
-	const viewBox = /viewBox="([^"]+)"/.exec(svg)?.[1] ?? '0 0 48 48';
+	const root = /<svg([^>]*)>/.exec(svg)?.[1] ?? '';
+	const viewBox = /viewBox="([^"]+)"/.exec(root)?.[1] ?? '0 0 48 48';
+	// Presentation attributes on the root (fill="none", round caps…) must keep applying
+	const inherited = root.replace(/\s(xmlns|viewBox|width|height)="[^"]*"/g, '').trim();
 	const inner = svg.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
-	return `<symbol id="art-${name}" viewBox="${viewBox}">${inner}</symbol>`;
+	const body = inherited ? `<g ${inherited}>${inner}</g>` : inner;
+	return `<symbol id="art-${name}" viewBox="${viewBox}">${body}</symbol>`;
 }
 
 /** Hidden, zero-size (not display:none, which can break <use> references) sprite sheet. */

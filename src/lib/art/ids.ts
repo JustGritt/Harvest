@@ -1,4 +1,4 @@
-import type { CropId } from '$lib/types';
+import type { CropId, UpgradeId } from '$lib/types';
 import type { GrowStage } from '$lib/utils/gameUtils';
 
 // Every sprite in src/lib/art/svg, by file name. art.test.ts keeps this list and the files in sync.
@@ -23,8 +23,33 @@ export const ART_IDS = [
 	'fence-frame',
 	// workers
 	'farmer',
+	'seed-planter',
+	// upgrades
+	'farmer-training',
+	'planter-gears',
+	'sprinkler',
+	'quality-seeds',
+	'fertilizer',
+	'expand-field',
 	// currency
-	'coin'
+	'coin',
+	'legacy-seed',
+	// ui
+	'pouch',
+	'stall',
+	'ledger',
+	'leaf',
+	'lock',
+	'check',
+	'close',
+	'sunrise',
+	'warning',
+	'crate',
+	'pointer',
+	// fx particles
+	'dirt',
+	'sparkle',
+	'petal'
 ] as const;
 
 export type ArtId = (typeof ART_IDS)[number];
@@ -33,3 +58,14 @@ export type ArtId = (typeof ART_IDS)[number];
 export function cropArt(crop: CropId, stage: GrowStage | 'mature'): ArtId {
 	return stage === 'seed' ? 'seed-mound' : `${crop}-${stage}`;
 }
+
+export const UPGRADE_ART: Record<UpgradeId, ArtId> = {
+	farmer: 'farmer',
+	seedPlanter: 'seed-planter',
+	farmerTraining: 'farmer-training',
+	planterGears: 'planter-gears',
+	sprinkler: 'sprinkler',
+	qualitySeeds: 'quality-seeds',
+	fertilizer: 'fertilizer',
+	expandField: 'expand-field'
+};

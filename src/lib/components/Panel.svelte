@@ -1,6 +1,9 @@
 <script lang="ts">
+	import Art from '$lib/art/Art.svelte';
+	import type { ArtId } from '$lib/art/ids';
+
 	export let title: string;
-	export let icon = '';
+	export let icon: ArtId | null = null;
 	/** Gold is reserved for Legacy. */
 	export let accent: 'wood' | 'gold' = 'wood';
 	let klass = '';
@@ -17,7 +20,7 @@
 			? 'bg-gold-400 text-wood-900'
 			: 'bg-wood-500 text-parchment-50'}"
 	>
-		{#if icon}<span aria-hidden="true">{icon}</span>{/if}
+		{#if icon}<Art id={icon} size="1.4em" />{/if}
 		{title}
 	</h2>
 	<div class="space-y-2 p-2.5">

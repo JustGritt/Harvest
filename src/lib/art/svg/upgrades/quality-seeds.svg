@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<!-- packet -->
+	<path d="M12 11 L34 11 L34 40 C34 41.2 33.2 42 32 42 L14 42 C12.8 42 12 41.2 12 40 Z" fill="#fdf6e3" stroke="#3b271b" stroke-width="2"/>
+	<path d="M12 11 L34 11 L34 16 L12 16 Z" fill="#f5b91f" stroke="#3b271b" stroke-width="2"/>
+	<path d="M16 12.5 L16 14.5 M20 12.5 L20 14.5 M24 12.5 L24 14.5 M28 12.5 L28 14.5" stroke="#b77706" stroke-width="1.2"/>
+	<path d="M31 20 L31 38" stroke="#e1c7a4" stroke-width="1.5"/>
+	<!-- window with seeds -->
+	<circle cx="22.5" cy="28.5" r="7.5" fill="#a3cc72" stroke="#3b271b" stroke-width="1.8"/>
+	<ellipse cx="20" cy="28" rx="1.7" ry="2.4" fill="#fcd34d" stroke="#3b271b" stroke-width="1.2" transform="rotate(-25 20 28)"/>
+	<ellipse cx="25" cy="27" rx="1.7" ry="2.4" fill="#fcd34d" stroke="#3b271b" stroke-width="1.2" transform="rotate(20 25 27)"/>
+	<ellipse cx="22.5" cy="32" rx="1.7" ry="2.4" fill="#fcd34d" stroke="#3b271b" stroke-width="1.2" transform="rotate(80 22.5 32)"/>
+	<path transform="translate(36.5 10) scale(1.15)" d="M0 -6 C0.8 -1.5 1.5 -0.8 6 0 C1.5 0.8 0.8 1.5 0 6 C-0.8 1.5 -1.5 0.8 -6 0 C-1.5 -0.8 -0.8 -1.5 0 -6 Z" fill="#fcd34d" stroke="#3b271b" stroke-width="1.30"/>
+	<path transform="translate(39 21) scale(0.6)" d="M0 -6 C0.8 -1.5 1.5 -0.8 6 0 C1.5 0.8 0.8 1.5 0 6 C-0.8 1.5 -1.5 0.8 -6 0 C-1.5 -0.8 -0.8 -1.5 0 -6 Z" fill="#fff4c2" stroke="#3b271b" stroke-width="2.50"/>
+</svg>

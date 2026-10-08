@@ -90,7 +90,7 @@ data/*.ts ──▶ utils/gameUtils.ts (formulas) ──▶ store.ts (state + ac
 
 ### Visual style
 
-- Cozy farm look, emoji as icons. Colours are `@theme` tokens in `src/app.css`: `soil` (plots), `leaf` (affordable actions), `parchment` (panels), `wood` (headers, borders, bars), `gold` (money, ready crops, selection, Legacy) and `berry` (danger). Use the tokens, not raw Tailwind hues, so a dark theme only has to redefine them.
+- Cozy farm look with hand-drawn SVG sprites for every icon (`<Art id=…>`, see `docs/art-style.md`), never emoji. Upgrade sprites come from `UPGRADE_ART`, crop sprites from `cropArt(crop, stage)`. Colours are `@theme` tokens in `src/app.css`: `soil` (plots), `leaf` (affordable actions), `parchment` (panels), `wood` (headers, borders, bars), `gold` (money, ready crops, selection, Legacy) and `berry` (danger). Use the tokens, not raw Tailwind hues, so a dark theme only has to redefine them.
 - `font-display` (Fredoka, self-hosted through fontsource) for titles and big numbers. Numbers that change use `tabular-nums`.
 - Custom utilities: `bg-meadow` (page background), `soil-dry` / `soil-wet` (empty and planted plots).
 - Purchases use `BuyButton`: leaf green when affordable, a gold fill toward the cost when not, a MAX badge when maxed.

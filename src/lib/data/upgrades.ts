@@ -5,7 +5,6 @@ export type UpgradeCategory = 'workers' | 'growth' | 'field';
 export interface UpgradeDef {
 	id: UpgradeId;
 	name: string;
-	icon: string;
 	description: string;
 	category: UpgradeCategory;
 	baseCost: number;
@@ -20,7 +19,6 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 	farmer: {
 		id: 'farmer',
 		name: 'Farmer',
-		icon: '🧑‍🌾',
 		description: 'Harvests ready plots on their own.',
 		category: 'workers',
 		baseCost: 100,
@@ -29,7 +27,6 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 	seedPlanter: {
 		id: 'seedPlanter',
 		name: 'Seed Planter',
-		icon: '🌱',
 		description: 'Plants your selected seed in empty plots.',
 		category: 'workers',
 		baseCost: 75,
@@ -38,7 +35,6 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 	farmerTraining: {
 		id: 'farmerTraining',
 		name: 'Farmer Training',
-		icon: '📘',
 		description: 'Farmers work 12% faster.',
 		category: 'workers',
 		baseCost: 200,
@@ -49,7 +45,6 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 	planterGears: {
 		id: 'planterGears',
 		name: 'Planter Gears',
-		icon: '⚙️',
 		description: 'Seed planters work 12% faster.',
 		category: 'workers',
 		baseCost: 150,
@@ -60,7 +55,6 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 	sprinkler: {
 		id: 'sprinkler',
 		name: 'Sprinkler',
-		icon: '💧',
 		description: 'Crops grow 8% faster (compounding).',
 		category: 'growth',
 		baseCost: 150,
@@ -70,7 +64,6 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 	qualitySeeds: {
 		id: 'qualitySeeds',
 		name: 'Quality Seeds',
-		icon: '✨',
 		description: '+20% harvest value.',
 		category: 'growth',
 		baseCost: 100,
@@ -79,7 +72,6 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 	fertilizer: {
 		id: 'fertilizer',
 		name: 'Fertilizer',
-		icon: '🧪',
 		description: '×1.1 harvest value (compounding).',
 		category: 'growth',
 		baseCost: 1000,
@@ -88,7 +80,6 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 	expandField: {
 		id: 'expandField',
 		name: 'Expand Field',
-		icon: '🚜',
 		description: 'Adds a column or row of plots.',
 		category: 'field',
 		baseCost: 250,

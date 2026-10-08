@@ -4,10 +4,12 @@
 
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import Art from '$lib/art/Art.svelte';
+	import type { ArtId } from '$lib/art/ids';
 
 	export let open: boolean;
 	export let title: string;
-	export let icon = '';
+	export let icon: ArtId | null = null;
 
 	const dispatch = createEventDispatcher<{ close: void }>();
 	let dialog: HTMLDialogElement;
@@ -35,7 +37,7 @@
 		id={titleId}
 		class="font-display bg-wood-500 text-parchment-50 flex items-center gap-2 px-4 py-2 text-xl font-semibold"
 	>
-		{#if icon}<span aria-hidden="true">{icon}</span>{/if}
+		{#if icon}<Art id={icon} size="1.5em" />{/if}
 		{title}
 	</h2>
 	<div class="space-y-3 p-4 text-sm">

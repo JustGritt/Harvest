@@ -48,11 +48,14 @@ Only the `@theme` token colours in `src/app.css` plus the extra hues in `src/lib
 
 ## Manifest
 
-| Family   | Sprites                                                                                                                                 |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| crops    | `seed-mound` (every crop's first stage), then `<crop>-sprout`, `<crop>-young`, `<crop>-mature` for wheat, carrot, pumpkin and sunflower |
-| field    | `soil-dry`, `soil-wet` (32×32 tiles), `fence-frame` (9-slice border: 12-unit bands, posts at corners and mid-edge so they repeat)       |
-| workers  | `farmer`                                                                                                                                |
-| currency | `coin`                                                                                                                                  |
+| Family   | Sprites                                                                                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| crops    | `seed-mound` (every crop's first stage), then `<crop>-sprout`, `<crop>-young`, `<crop>-mature` for wheat, carrot, pumpkin and sunflower                                                    |
+| field    | `soil-dry`, `soil-wet` (32×32 tiles), `fence-frame` (9-slice border: 12-unit bands, posts at corners and mid-edge so they repeat)                                                          |
+| workers  | `farmer`, `seed-planter`                                                                                                                                                                   |
+| upgrades | `farmer-training`, `planter-gears`, `sprinkler`, `quality-seeds`, `fertilizer`, `expand-field` (mapped from upgrade ids by `UPGRADE_ART`)                                                  |
+| currency | `coin`, `legacy-seed`                                                                                                                                                                      |
+| ui       | `pouch` (Seeds), `stall` (Upgrades), `ledger` (Stats), `leaf` (Growth), `lock`, `check`, `close`, `sunrise` (welcome back), `warning`, `crate` (save / import), `pointer` (first-run hint) |
+| fx       | `dirt`, `sparkle`, `petal` (particles)                                                                                                                                                     |
 
 All sprites are original work made for this repository and share its license.

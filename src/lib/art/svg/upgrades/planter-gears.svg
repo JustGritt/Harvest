@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<rect x="-3.6" y="-19" width="7.2" height="8" rx="1.6" fill="#b6bcc2" stroke="#3b271b" stroke-width="2" transform="translate(24 24) rotate(0)"/>
+	<rect x="-3.6" y="-19" width="7.2" height="8" rx="1.6" fill="#b6bcc2" stroke="#3b271b" stroke-width="2" transform="translate(24 24) rotate(45)"/>
+	<rect x="-3.6" y="-19" width="7.2" height="8" rx="1.6" fill="#b6bcc2" stroke="#3b271b" stroke-width="2" transform="translate(24 24) rotate(90)"/>
+	<rect x="-3.6" y="-19" width="7.2" height="8" rx="1.6" fill="#b6bcc2" stroke="#3b271b" stroke-width="2" transform="translate(24 24) rotate(135)"/>
+	<rect x="-3.6" y="-19" width="7.2" height="8" rx="1.6" fill="#b6bcc2" stroke="#3b271b" stroke-width="2" transform="translate(24 24) rotate(180)"/>
+	<rect x="-3.6" y="-19" width="7.2" height="8" rx="1.6" fill="#b6bcc2" stroke="#3b271b" stroke-width="2" transform="translate(24 24) rotate(225)"/>
+	<rect x="-3.6" y="-19" width="7.2" height="8" rx="1.6" fill="#b6bcc2" stroke="#3b271b" stroke-width="2" transform="translate(24 24) rotate(270)"/>
+	<rect x="-3.6" y="-19" width="7.2" height="8" rx="1.6" fill="#b6bcc2" stroke="#3b271b" stroke-width="2" transform="translate(24 24) rotate(315)"/>
+	<circle cx="24" cy="24" r="13.5" fill="#b6bcc2" stroke="#3b271b" stroke-width="2"/>
+	<path d="M13.5 20 A11 11 0 0 1 20 13.5" stroke="#e3e6e8" stroke-width="2.2"/>
+	<path d="M34.5 28 A11 11 0 0 1 28 34.5" stroke="#858c94" stroke-width="2.2"/>
+	<circle cx="24" cy="24" r="5.5" fill="#858c94" stroke="#3b271b" stroke-width="2"/>
+	<!-- seed in the hub -->
+	<ellipse cx="24" cy="24" rx="2.2" ry="3" fill="#fcd34d" stroke="#3b271b" stroke-width="1.3" transform="rotate(-20 24 24)"/>
+</svg>

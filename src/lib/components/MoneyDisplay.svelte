@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Art from '$lib/art/Art.svelte';
 	import { formatNumber } from '$lib/utils/gameUtils';
 
 	export let money: number;
@@ -15,7 +16,8 @@
 				? 'origin-right text-xl'
 				: 'origin-left text-3xl'} {bump ? 'motion-safe:animate-bump' : ''}"
 		>
-			💰 {formatNumber(money)}
+			<Art id="coin" label="money" />
+			{formatNumber(money)}
 		</span>
 	{/key}
 	<span class="text-wood-600 text-xs tabular-nums">≈ {formatNumber(incomePerSec)} / s</span>

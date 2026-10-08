@@ -4,6 +4,8 @@
 	import { BALANCE } from '$lib/data/balance';
 	import { CROPS, CROP_ORDER } from '$lib/data/crops';
 	import { UPGRADES, UPGRADE_ORDER, type UpgradeCategory } from '$lib/data/upgrades';
+	import Art from '$lib/art/Art.svelte';
+	import { cropArt, UPGRADE_ART, type ArtId } from '$lib/art/ids';
 	import BuyButton from '$lib/components/BuyButton.svelte';
 	import Dialog from '$lib/components/Dialog.svelte';
 	import Panel from '$lib/components/Panel.svelte';
@@ -27,10 +29,10 @@
 		upgradeCost
 	} from '$lib/utils/gameUtils';
 
-	const SECTIONS: { category: UpgradeCategory; title: string; icon: string }[] = [
-		{ category: 'workers', title: 'Workers', icon: '🧑‍🌾' },
-		{ category: 'growth', title: 'Growth & Value', icon: '🌿' },
-		{ category: 'field', title: 'Field', icon: '🚜' }
+	const SECTIONS: { category: UpgradeCategory; title: string; icon: ArtId }[] = [
+		{ category: 'workers', title: 'Workers', icon: 'farmer' },
+		{ category: 'growth', title: 'Growth & Value', icon: 'leaf' },
+		{ category: 'field', title: 'Field', icon: 'expand-field' }
 	];
 
 	$: game = $gameStore;
@@ -47,7 +49,7 @@
 	interface TabDef {
 		id: Tab;
 		label: string;
-		icon: string;
+		icon: ArtId;
 		/** Shows a dot when something in the tab can be bought. */
 		alert: boolean;
 	}
@@ -58,7 +60,7 @@
 		{
 			id: 'seeds',
 			label: 'Seeds',
-			icon: '🌾',
+			icon: 'pouch',
 			alert: CROP_ORDER.some(
 				(id) => !game.unlockedCrops.includes(id) && game.money >= CROPS[id].unlockCost
 			)
@@ -66,7 +68,7 @@
 		{
 			id: 'upgrades',
 			label: 'Upgrades',
-			icon: '🛒',
+			icon: 'stall',
 			alert: UPGRADE_ORDER.some(
 				(id) =>
 					isVisible(id) &&
@@ -75,9 +77,9 @@
 			)
 		},
 		...(showPrestige
-			? [{ id: 'legacy' as const, label: 'Legacy', icon: '🌟', alert: gain > 0 }]
+			? [{ id: 'legacy' as const, label: 'Legacy', icon: 'legacy-seed' as const, alert: gain > 0 }]
 			: []),
-		{ id: 'stats', label: 'Stats', icon: '📊', alert: false }
+		{ id: 'stats', label: 'Stats', icon: 'ledger', alert: false }
 	];
 
 	// The last opened tab stays rendered while the sheet slides closed
@@ -223,11 +225,17 @@
 	}
 </script>
 
-<Dialog open={offline !== null} title="Welcome back!" icon="🌅" on:close={() => (offline = null)}>
+<Dialog
+	open={offline !== null}
+	title="Welcome back!"
+	icon="sunrise"
+	on:close={() => (offline = null)}
+>
 	{#if offline}
 		<p>While you were away for <b>{formatDuration(offline.elapsed)}</b>, your farm earned</p>
 		<p class="font-display text-gold-700 text-center text-3xl font-semibold tabular-nums">
-			+{formatNumber(offline.earned)} 💰
+			+{formatNumber(offline.earned)}
+			<Art id="coin" label="money" />
 		</p>
 		{#if offline.elapsed > BALANCE.maxOfflineMs}
 			<p class="text-wood-600 text-xs">
@@ -241,11 +249,11 @@
 <Dialog
 	open={confirming === 'sell'}
 	title="Sell the farm?"
-	icon="🌟"
+	icon="legacy-seed"
 	on:close={() => (confirming = null)}
 >
 	<p>
-		You get <b>+{gain} 🌟 legacy seed{gain === 1 ? '' : 's'}</b>, for
+		You get <b>+{gain} <Art id="legacy-seed" /> legacy seed{gain === 1 ? '' : 's'}</b>, for
 		<b>+{Math.round((game.legacySeeds + gain) * BALANCE.legacySeedBonus * 100)}%</b> income in every
 		future run.
 	</p>
@@ -255,14 +263,16 @@
 	</ul>
 	<svelte:fragment slot="actions">
 		<button class="{BTN} {BTN_PLAIN}" on:click={() => (confirming = null)}>Cancel</button>
-		<button class="{BTN} {BTN_GOLD}" on:click={sellFarm}>Sell for +{gain} 🌟</button>
+		<button class="{BTN} {BTN_GOLD}" on:click={sellFarm}
+			>Sell for +{gain} <Art id="legacy-seed" label="legacy seeds" /></button
+		>
 	</svelte:fragment>
 </Dialog>
 
 <Dialog
 	open={confirming === 'reset'}
 	title="Reset your save?"
-	icon="⚠️"
+	icon="warning"
 	on:close={() => (confirming = null)}
 >
 	<p>
@@ -278,7 +288,7 @@
 <Dialog
 	open={confirming === 'import'}
 	title="Import this save?"
-	icon="📥"
+	icon="crate"
 	on:close={() => (confirming = null)}
 >
 	<p>It replaces your current game. Your current progress will be lost.</p>
@@ -295,7 +305,7 @@
 	<h1
 		class="font-display flex items-center gap-1.5 text-xl font-semibold tracking-wide lg:text-2xl"
 	>
-		<span aria-hidden="true">🌾</span> Harvest
+		<Art id="wheat-mature" size="1.3em" /> Harvest
 	</h1>
 	<div class="bg-parchment-100 rounded-lg px-2.5 py-0.5 lg:hidden">
 		<MoneyDisplay money={game.money} {incomePerSec} bump={moneyBump} compact />
@@ -312,8 +322,9 @@
 			<p
 				class="border-wood-600 bg-parchment-100 mx-auto mb-2 max-w-3xl rounded-lg border-2 px-3 py-1.5 text-center text-sm shadow-sm"
 			>
-				👆 Tap an empty plot to plant {CROPS[game.selectedCrop].name.toLowerCase()}, then tap it
-				again when it glows to harvest.
+				<Art id="pointer" size="1.4em" /> Tap an empty plot to plant {CROPS[
+					game.selectedCrop
+				].name.toLowerCase()}, then tap it again when it glows to harvest.
 			</p>
 		{/if}
 		<!-- Fence around the field (9-slice border image) -->
@@ -351,7 +362,7 @@
 			<button
 				class="text-wood-700 hover:bg-parchment-300 grid size-8 place-items-center rounded-full"
 				aria-label="Close"
-				on:click={() => (activeTab = null)}>✕</button
+				on:click={() => (activeTab = null)}><Art id="close" size="1.1rem" /></button
 			>
 		</div>
 		<div
@@ -363,7 +374,7 @@
 				<MoneyDisplay money={game.money} {incomePerSec} bump={moneyBump} />
 			</div>
 
-			<Panel title="Seeds" icon="🌾" class={panelVisibility('seeds', sheetTab)}>
+			<Panel title="Seeds" icon="pouch" class={panelVisibility('seeds', sheetTab)}>
 				{#each CROP_ORDER as id (id)}
 					{@const crop = CROPS[id]}
 					{@const selected = game.selectedCrop === id}
@@ -376,29 +387,31 @@
 							on:click={() => gameStore.selectCrop(id)}
 						>
 							<span
-								class="bg-parchment-100 grid size-9 shrink-0 place-items-center rounded-md text-xl shadow-inner"
-								aria-hidden="true">{crop.icon}</span
+								class="bg-parchment-100 grid size-9 shrink-0 place-items-center rounded-md shadow-inner"
 							>
+								<Art id={cropArt(id, 'mature')} size="1.75rem" />
+							</span>
 							<span class="min-w-0 flex-1 leading-tight">
 								<span class="block font-semibold">{crop.name}</span>
 								<span class="text-wood-600 block text-xs tabular-nums">
 									{formatSeconds(growTime(id, game.upgrades))} · {formatNumber(
 										harvestValue(id, game)
-									)} 💰 · {formatNumber(cropRate(id, game))}/s per plot
+									)}
+									<Art id="coin" /> · {formatNumber(cropRate(id, game))}/s per plot
 								</span>
 							</span>
 							{#if selected}
-								<span class="text-gold-600 font-bold" aria-hidden="true">✓</span>
+								<Art id="check" size="1.25rem" />
 							{/if}
 						</button>
 					{:else}
 						<BuyButton
-							icon={crop.icon}
+							art={cropArt(id, 'mature')}
 							name={crop.name}
-							badge="🔒"
+							locked
 							effect="{formatSeconds(growTime(id, game.upgrades))} · {formatNumber(
 								harvestValue(id, game)
-							)} 💰 per harvest"
+							)} per harvest"
 							cost={crop.unlockCost}
 							money={game.money}
 							on:click={() => gameStore.unlockCrop(id)}
@@ -418,7 +431,7 @@
 							{@const def = UPGRADES[id]}
 							{@const level = game.upgrades[id]}
 							<BuyButton
-								icon={def.icon}
+								art={UPGRADE_ART[id]}
 								name={def.name}
 								badge={def.maxLevel ? `Lv ${level}` : `×${level}`}
 								effect={describeEffect(id, game)}
@@ -434,9 +447,15 @@
 			</div>
 
 			{#if showPrestige}
-				<Panel title="Legacy" icon="🌟" accent="gold" class={panelVisibility('legacy', sheetTab)}>
+				<Panel
+					title="Legacy"
+					icon="legacy-seed"
+					accent="gold"
+					class={panelVisibility('legacy', sheetTab)}
+				>
 					<p class="text-sm">
-						<b class="font-display text-base">{game.legacySeeds} 🌟</b> legacy seeds give
+						<b class="font-display text-base">{game.legacySeeds} <Art id="legacy-seed" /></b> legacy
+						seeds give
 						<b>+{Math.round(game.legacySeeds * BALANCE.legacySeedBonus * 100)}%</b> income.
 					</p>
 					<div>
@@ -458,12 +477,13 @@
 						disabled={gain < 1}
 						on:click={() => (confirming = 'sell')}
 					>
-						Sell farm for +{gain} 🌟
+						Sell farm for +{gain}
+						<Art id="legacy-seed" label="legacy seeds" />
 					</button>
 				</Panel>
 			{/if}
 
-			<Panel title="Stats" icon="📊" class="{panelVisibility('stats', sheetTab)} text-sm">
+			<Panel title="Stats" icon="ledger" class="{panelVisibility('stats', sheetTab)} text-sm">
 				<dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 tabular-nums">
 					<dt>Farmers</dt>
 					<dd class="font-semibold">
@@ -490,7 +510,9 @@
 				</dl>
 
 				<div class="border-soil-200 mt-1 border-t-2 border-dashed pt-2">
-					<h3 class="font-display mb-1.5 font-semibold">⚙️ Save</h3>
+					<h3 class="font-display mb-1.5 flex items-center gap-1.5 font-semibold">
+						<Art id="crate" size="1.2em" /> Save
+					</h3>
 					<div class="flex gap-2 text-xs">
 						<button
 							class="border-wood-500 text-wood-700 hover:bg-parchment-200 rounded-md border-2 px-2 py-1 font-semibold"
@@ -557,7 +579,7 @@
 			aria-pressed={active}
 			on:click={() => (activeTab = active ? null : tab.id)}
 		>
-			<span class="text-lg leading-none" aria-hidden="true">{tab.icon}</span>
+			<Art id={tab.icon} size="1.6rem" />
 			{tab.label}
 			{#if tab.alert}
 				<span

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<!-- pages -->
+	<path d="M34 10 L37.5 11.5 L37.5 40.5 L34 39 Z" fill="#fffcf5" stroke="#3b271b" stroke-width="2"/>
+	<path d="M35.7 14 L35.7 37" stroke="#e1c7a4" stroke-width="1"/>
+	<!-- cover -->
+	<rect x="11" y="8" width="24" height="32" rx="2.5" fill="#639a35" stroke="#3b271b" stroke-width="2"/>
+	<rect x="11" y="8" width="4.5" height="32" rx="2" fill="#4c7a28" stroke="#3b271b" stroke-width="2"/>
+	<path d="M18.5 12 L31.5 12" stroke="#80b44c" stroke-width="1.5"/>
+	<!-- leaf emblem -->
+	<g transform="translate(25 31) rotate(15)">
+		<path d="M0 0 C-5 -3 -6 -10 0 -16 C6 -10 5 -3 0 0 Z" fill="#fcd34d" stroke="#3b271b" stroke-width="1.6"/>
+		<path d="M0 -2 L0 -12" stroke="#b77706" stroke-width="1.2"/>
+	</g>
+	<!-- bookmark -->
+	<path d="M29 39.5 L29 45 L31 43.3 L33 45 L33 39.5" fill="#d1453b" stroke="#3b271b" stroke-width="1.5"/>
+</svg>

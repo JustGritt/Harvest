@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<!-- shoulders and shirt -->
+	<path d="M8 46 C8 39 14.5 35 24 35 C33.5 35 40 39 40 46 Z" fill="#7cc4e8" stroke="#3b271b" stroke-width="2"/>
+	<path d="M12 41 C13.5 38.5 16.5 37 20 36.4" stroke="#bfe6f7" stroke-width="1.5"/>
+	<path d="M24 35.5 L24 46" stroke="#4a97c2" stroke-width="1.5"/>
+	<circle cx="15" cy="26.5" r="2.4" fill="#e8b083" stroke="#3b271b" stroke-width="2"/>
+	<circle cx="33" cy="26.5" r="2.4" fill="#e8b083" stroke="#3b271b" stroke-width="2"/>
+	<circle cx="24" cy="25.5" r="9" fill="#e8b083" stroke="#3b271b" stroke-width="2"/>
+	<path d="M30.5 28.0 C29.5 31.0 27 33.0 24 33.4" stroke="#c98d63" stroke-width="1.5"/>
+	<ellipse cx="20.5" cy="29.0" rx="1.6" ry="1" fill="#d1453b" opacity="0.35"/>
+	<ellipse cx="27.5" cy="29.0" rx="1.6" ry="1" fill="#d1453b" opacity="0.35"/>
+	<ellipse cx="21" cy="26.3" rx="1.1" ry="1.4" fill="#3b271b"/>
+	<ellipse cx="27" cy="26.3" rx="1.1" ry="1.4" fill="#3b271b"/>
+	<path d="M21.8 29.8 Q24 31.6 26.2 29.8" stroke="#3b271b" stroke-width="1.4"/>
+	<!-- bucket hat -->
+	<path d="M15.5 21 C15.5 13 19 10 24 10 C29 10 32.5 13 32.5 21 Z" fill="#639a35" stroke="#3b271b" stroke-width="2"/>
+	<path d="M19 16.5 C19 14 20.5 12.3 22.5 11.8" stroke="#80b44c" stroke-width="1.5"/>
+	<path d="M12.5 22.5 C15 19.5 33 19.5 35.5 22.5 C33 24 15 24 12.5 22.5 Z" fill="#4c7a28" stroke="#3b271b" stroke-width="2"/>
+	<!-- seed bag held in front -->
+	<path d="M29 38 C27.5 40.5 27.5 44.5 29.5 45.5 L39.5 45.5 C41.5 44.5 41.5 40.5 40 38 Z" fill="#e1c7a4" stroke="#3b271b" stroke-width="2"/>
+	<path d="M30 38 C31.5 36.5 37.5 36.5 39 38" stroke="#7f5435" stroke-width="2"/>
+	<ellipse cx="34.5" cy="42" rx="1.6" ry="2.1" fill="#fcd34d" stroke="#3b271b" stroke-width="1.2"/>
+</svg>

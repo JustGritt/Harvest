@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<!-- tap ripples -->
+	<path d="M15 9 C17 5 21 3.5 24 3.5 C27 3.5 31 5 33 9" stroke="#fdf6e3" stroke-width="2"/>
+	<!-- finger -->
+	<rect x="19.5" y="8" width="8" height="20" rx="4" fill="#e8b083" stroke="#3b271b" stroke-width="2"/>
+	<path d="M21.8 11 L21.8 17" stroke="#f6cfa4" stroke-width="1.5"/>
+	<!-- fist -->
+	<path d="M15 25 C15 22.5 17.5 21.5 19.5 22.5 L19.5 26 L27.5 26 L27.5 23 C29 21 33.5 21.5 33.5 25 L33.5 34 C33.5 39.5 30 43 24.5 43 C19 43 15 39.5 15 34 Z" fill="#e8b083" stroke="#3b271b" stroke-width="2"/>
+	<path d="M27.5 26 L27.5 30 M31 25 L31 30" stroke="#c98d63" stroke-width="1.5"/>
+	<!-- thumb -->
+	<path d="M15.5 30 C12 29 9.5 31 10.5 33.5 C11.5 35.5 14 35.5 15.5 35" fill="#e8b083" stroke="#3b271b" stroke-width="2"/>
+</svg>

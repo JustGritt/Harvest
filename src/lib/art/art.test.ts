@@ -31,10 +31,17 @@ describe.each(Object.entries(ART_SOURCES))('%s.svg', (name, svg) => {
 });
 
 describe('toSymbol', () => {
-	it('turns an svg file into a symbol with the same viewBox and contents', () => {
+	it('turns an svg file into a symbol, keeping the root presentation attributes', () => {
 		const svg = '<svg xmlns="x" viewBox="0 0 48 48" fill="none">\n<circle r="1"/>\n</svg>\n';
 		expect(toSymbol('dot', svg)).toBe(
-			'<symbol id="art-dot" viewBox="0 0 48 48">\n<circle r="1"/>\n</symbol>'
+			'<symbol id="art-dot" viewBox="0 0 48 48"><g fill="none">\n<circle r="1"/>\n</g></symbol>'
+		);
+	});
+
+	it('adds no wrapper when the root has nothing to inherit', () => {
+		const svg = '<svg xmlns="x" viewBox="0 0 32 32" width="32" height="32"><rect/></svg>';
+		expect(toSymbol('tile', svg)).toBe(
+			'<symbol id="art-tile" viewBox="0 0 32 32"><rect/></symbol>'
 		);
 	});
 });
