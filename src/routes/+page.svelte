@@ -6,6 +6,7 @@
 	import { UPGRADES, UPGRADE_ORDER, type UpgradeCategory } from '$lib/data/upgrades';
 	import UpgradeButton from '$lib/components/UpgradeButton.svelte';
 	import MoneyDisplay from '$lib/components/MoneyDisplay.svelte';
+	import Plot from '$lib/components/Plot.svelte';
 	import type { Cell, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 	import {
 		describeEffect,
@@ -151,11 +152,6 @@
 		return !requires || game.upgrades[requires] > 0;
 	}
 
-	function growProgress(cell: Cell) {
-		if (cell.plantedAt === null || cell.readyAt === null) return 0;
-		return Math.min(100, ((now - cell.plantedAt) / (cell.readyAt - cell.plantedAt)) * 100);
-	}
-
 	function sellFarm() {
 		if (
 			confirm(
@@ -240,53 +236,21 @@
 
 <section class="relative flex flex-col pb-16 lg:flex-row lg:pb-0">
 	<div class="flex-1 p-2 sm:p-4 lg:pr-0">
+		<!-- Wooden frame around the field -->
 		<div
-			class="mx-auto grid max-w-3xl gap-1 sm:gap-2"
+			class="border-wood-700 bg-soil-800 mx-auto grid max-w-3xl gap-1 rounded-xl border-4 p-1 shadow-lg sm:gap-2 sm:rounded-2xl sm:p-2"
 			style="grid-template-columns: repeat({cols}, minmax(0, 1fr));"
 		>
 			{#each game.field as row, r (r)}
 				{#each row as cell, c (cell.id)}
-					<button
-						class="group relative flex aspect-square touch-manipulation flex-col items-center justify-center rounded border border-green-700 bg-green-100 p-0.5 text-center select-none hover:bg-green-200 sm:p-2"
-						class:ring-2={cell.status === 'ready'}
-						class:sm:ring-4={cell.status === 'ready'}
-						class:ring-yellow-300={cell.status === 'ready'}
-						aria-label={cell.crop
-							? `${CROPS[cell.crop].name}, ${cell.status}`
-							: `Empty plot, plant ${CROPS[game.selectedCrop].name}`}
+					<Plot
+						{cell}
+						{now}
+						selectedCrop={game.selectedCrop}
+						value={cell.crop ? harvestValue(cell.crop, game) : 0}
+						pops={pops.filter((p) => p.cellId === cell.id)}
 						on:click={() => clickCell(r, c, cell)}
-					>
-						{#if cell.status === 'empty'}
-							<div class="hidden text-sm text-gray-500 sm:block">Empty</div>
-							<div class="hidden text-xs text-gray-500 opacity-0 group-hover:opacity-100 sm:block">
-								Plant {CROPS[game.selectedCrop].icon}
-							</div>
-						{:else if cell.status === 'growing' && cell.crop}
-							<div class="text-lg opacity-50 sm:text-2xl">{CROPS[cell.crop].icon}</div>
-							<div class="mt-1 h-1 w-full rounded bg-gray-300 sm:mt-2 sm:h-2">
-								<div
-									class="h-full rounded bg-green-500"
-									style="width: {growProgress(cell)}%;"
-								></div>
-							</div>
-						{:else if cell.status === 'ready' && cell.crop}
-							<div class="motion-safe:animate-ready text-xl sm:text-3xl">
-								{CROPS[cell.crop].icon}
-							</div>
-							<div class="hidden text-sm font-semibold sm:block">
-								+{formatNumber(harvestValue(cell.crop, game))}
-							</div>
-						{/if}
-						{#each pops.filter((p) => p.cellId === cell.id) as pop (pop.key)}
-							<span
-								class="motion-safe:animate-float-up motion-reduce:animate-fade-out pointer-events-none absolute top-1/4 left-1/2 z-[1] -translate-x-1/2 whitespace-nowrap {pop.auto
-									? 'text-xs text-gray-600'
-									: 'text-sm font-bold text-green-800 sm:text-base'}"
-							>
-								+{formatNumber(pop.value)}
-							</span>
-						{/each}
-					</button>
+					/>
 				{/each}
 			{/each}
 		</div>

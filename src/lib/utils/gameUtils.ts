@@ -59,6 +59,20 @@ export function valueMultiplier(state: Pick<GameState, 'upgrades' | 'legacySeeds
 	);
 }
 
+/** Share of the grow time that has passed, 0–1. */
+export function growProgress(cell: Cell, now: number): number {
+	if (cell.plantedAt === null || cell.readyAt === null) return 0;
+	const total = cell.readyAt - cell.plantedAt;
+	if (total <= 0) return 1;
+	return Math.min(1, Math.max(0, (now - cell.plantedAt) / total));
+}
+
+/** How a growing crop is drawn: a sprout for the first half, then the crop scaling up to full size. */
+export function growStage(progress: number): { sprout: boolean; scale: number } {
+	if (progress < 0.5) return { sprout: true, scale: 1 };
+	return { sprout: false, scale: 0.6 + 0.4 * Math.min(1, (progress - 0.5) / 0.5) };
+}
+
 export function harvestValue(crop: CropId, state: Pick<GameState, 'upgrades' | 'legacySeeds'>) {
 	return Math.round(CROPS[crop].value * valueMultiplier(state));
 }

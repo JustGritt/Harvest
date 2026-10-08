@@ -7,6 +7,8 @@ import {
 	fieldSize,
 	formatDuration,
 	formatNumber,
+	growProgress,
+	growStage,
 	growTime,
 	harvestValue,
 	isMaxed,
@@ -49,6 +51,27 @@ describe('growTime', () => {
 
 	it('compounds sprinklers', () => {
 		expect(growTime('wheat', levels({ sprinkler: 2 }))).toBeCloseTo(3000 * 0.92 ** 2);
+	});
+});
+
+describe('growProgress / growStage', () => {
+	const planted = { ...createCell(0, 0), status: 'growing' as const, crop: 'wheat' as const };
+
+	it('measures elapsed share of the grow time, clamped to 0–1', () => {
+		const cell = { ...planted, plantedAt: 1000, readyAt: 3000 };
+		expect(growProgress(cell, 2000)).toBe(0.5);
+		expect(growProgress(cell, 500)).toBe(0);
+		expect(growProgress(cell, 9000)).toBe(1);
+	});
+
+	it('is 0 for an empty plot', () => {
+		expect(growProgress(createCell(0, 0), 5000)).toBe(0);
+	});
+
+	it('shows a sprout first, then the crop growing to full size', () => {
+		expect(growStage(0.2)).toEqual({ sprout: true, scale: 1 });
+		expect(growStage(0.5)).toEqual({ sprout: false, scale: 0.6 });
+		expect(growStage(1)).toEqual({ sprout: false, scale: 1 });
 	});
 });
 
