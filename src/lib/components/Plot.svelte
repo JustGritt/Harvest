@@ -4,6 +4,7 @@
 	import soilDry from '$lib/art/svg/field/soil-dry.svg?url';
 	import soilWet from '$lib/art/svg/field/soil-wet.svg?url';
 	import { CROPS } from '$lib/data/crops';
+	import { replay } from '$lib/fx/replay';
 	import type { Cell, CropId, HarvestEvent } from '$lib/types';
 	import { formatNumber, growProgress, growStage } from '$lib/utils/gameUtils';
 
@@ -20,10 +21,13 @@
 	$: stage = growStage(progress);
 	$: ready = cell.status === 'ready';
 	$: soil = cell.status === 'empty' ? soilDry : soilWet;
+	// Offsets each plot's ready glint so a field of ripe crops doesn't sparkle in sync
+	$: glintDelay = -([...cell.id].reduce((h, ch) => h * 31 + ch.charCodeAt(0), 7) % 2600);
 </script>
 
 <button
-	class="group border-soil-800/50 relative flex aspect-square touch-manipulation items-center justify-center overflow-hidden rounded-md border-2 pb-1.5 shadow-[inset_0_-3px_0_rgb(0_0_0/0.15)] select-none hover:brightness-110 sm:rounded-lg sm:pb-2 {ready
+	data-cell={cell.id}
+	class="group border-soil-800/50 relative flex aspect-square touch-manipulation items-center justify-center overflow-hidden rounded-md border-2 pb-1.5 shadow-[inset_0_-3px_0_rgb(0_0_0/0.15)] transition-transform duration-100 select-none hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.94] sm:rounded-lg sm:pb-2 {ready
 		? 'border-gold-300 shadow-[0_0_12px_var(--color-gold-300),inset_0_0_10px_rgb(255_229_138/0.5)]'
 		: ''}"
 	style={`background: url("${soil}") 0 0 / 28px`}
@@ -40,24 +44,36 @@
 		/>
 	{:else if crop}
 		{#key cell.plantedAt}
-			<span
-				class="flex size-[78%] items-end justify-center {ready
-					? 'motion-safe:animate-ready'
-					: 'motion-safe:animate-plant'}"
-			>
+			<!-- Drops in when planted -->
+			<span class="motion-safe:animate-plant flex size-[78%] items-end justify-center">
+				<!-- Pops each time the crop reaches a new stage -->
 				<span
-					class="block size-full origin-bottom transition-transform duration-300"
-					style="transform: scale({ready ? 1.05 : stage.scale})"
+					class="block size-full origin-bottom"
+					use:replay={{ key: ready ? 'mature' : stage.stage, cls: 'motion-safe:animate-pop' }}
 				>
-					<Art
-						id={cropArt(crop.id, ready ? 'mature' : stage.stage)}
-						size="100%"
-						class="drop-shadow-[0_2px_1px_rgb(0_0_0/0.25)]"
-					/>
+					<!-- Sways from the base once ripe -->
+					<span class="block size-full origin-bottom {ready ? 'motion-safe:animate-sway' : ''}">
+						<span
+							class="block size-full origin-bottom transition-transform duration-300"
+							style="transform: scale({ready ? 1.05 : stage.scale})"
+						>
+							<Art
+								id={cropArt(crop.id, ready ? 'mature' : stage.stage)}
+								size="100%"
+								class="drop-shadow-[0_2px_1px_rgb(0_0_0/0.25)]"
+							/>
+						</span>
+					</span>
 				</span>
 			</span>
 		{/key}
 		{#if ready}
+			<span
+				class="motion-safe:animate-glint absolute top-[12%] right-[14%] hidden size-[24%] motion-safe:block"
+				style="animation-delay: {glintDelay}ms"
+			>
+				<Art id="sparkle" size="100%" />
+			</span>
 			<span
 				class="font-display bg-parchment-100/90 text-gold-700 absolute bottom-1 hidden rounded px-1.5 text-xs font-semibold tabular-nums sm:block"
 			>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { gameStore } from '$lib/store';
 	import { BALANCE } from '$lib/data/balance';
 	import { CROPS, CROP_ORDER } from '$lib/data/crops';
@@ -11,6 +12,7 @@
 	import Panel from '$lib/components/Panel.svelte';
 	import MoneyDisplay from '$lib/components/MoneyDisplay.svelte';
 	import Plot from '$lib/components/Plot.svelte';
+	import { burst, centerOf, coinCount, flyCoins, pluck } from '$lib/fx/fx';
 	import fenceFrame from '$lib/art/svg/field/fence-frame.svg?url';
 	import type { Cell, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 	import {
@@ -110,11 +112,10 @@
 	const MAX_POPS = 30;
 	let pops: (HarvestEvent & { key: number })[] = [];
 	let nextPopKey = 0;
-	/** Bumped on player harvests to replay the money animation. */
+	/** Bumped when harvest coins reach the counter, to replay the money animation. */
 	let moneyBump = 0;
 
 	function addPop(event: HarvestEvent) {
-		if (!event.auto) moneyBump++;
 		// Under heavy automation, drop farmer pops rather than flood the DOM
 		if (event.auto && pops.length >= MAX_POPS) return;
 		const key = nextPopKey++;
@@ -164,12 +165,33 @@
 		};
 	});
 
-	function clickCell(r: number, c: number, cell: Cell) {
+	// Player actions get particles; workers don't, so an automated field stays calm
+	function clickCell(r: number, c: number, cell: Cell, plot: HTMLElement) {
+		const rect = plot.getBoundingClientRect();
 		if (cell.status === 'empty') {
 			gameStore.plantCrop(r, c);
-		} else {
-			gameStore.harvestCrop(r, c);
+			if (get(gameStore).field[r][c].status !== 'empty') {
+				const { x, y } = centerOf(rect);
+				burst(
+					{ x, y: y + rect.height * 0.2 },
+					{
+						art: 'dirt',
+						count: 6,
+						spread: rect.width * 0.5,
+						size: rect.width * 0.18,
+						arc: Math.PI
+					}
+				);
+			}
+			return;
 		}
+		const crop = cell.crop;
+		const before = get(gameStore).runEarned;
+		gameStore.harvestCrop(r, c);
+		const earned = get(gameStore).runEarned - before;
+		if (earned <= 0 || !crop) return;
+		pluck(rect, cropArt(crop, 'mature'));
+		flyCoins(centerOf(rect), coinCount(earned)).then(() => moneyBump++);
 	}
 
 	function isVisible(id: UpgradeId) {
@@ -340,7 +362,7 @@
 						selectedCrop={game.selectedCrop}
 						value={cell.crop ? harvestValue(cell.crop, game) : 0}
 						pops={pops.filter((p) => p.cellId === cell.id)}
-						on:click={() => clickCell(r, c, cell)}
+						on:click={(e) => clickCell(r, c, cell, e.currentTarget as HTMLElement)}
 					/>
 				{/each}
 			{/each}
