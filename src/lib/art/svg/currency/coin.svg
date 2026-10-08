@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<circle cx="24" cy="24" r="18" fill="#f5b91f" stroke="#3b271b" stroke-width="2"/>
+	<!-- rim light and shade -->
+	<path d="M8.3 21.2 A16 16 0 0 1 17.2 9.5" stroke="#fff4c2" stroke-width="2.5"/>
+	<path d="M39.7 26.8 A16 16 0 0 1 30.8 38.5" stroke="#e09b0b" stroke-width="2.5"/>
+	<!-- face -->
+	<circle cx="24" cy="24" r="12.5" fill="#fcd34d" stroke="#b77706" stroke-width="1.5"/>
+	<!-- sprout emboss -->
+	<path d="M24 32 L24 23.5" stroke="#b77706" stroke-width="2"/>
+	<path d="M24 26 C20 26 17.5 23.5 17.5 19.5 C21.5 19.5 24 22 24 26 Z" fill="#e09b0b" stroke="#b77706" stroke-width="1.3"/>
+	<path d="M24 23.5 C28 23.5 30.5 21 30.5 17 C26.5 17 24 19.5 24 23.5 Z" fill="#e09b0b" stroke="#b77706" stroke-width="1.3"/>
+	<path d="M15.5 18 A10 10 0 0 1 19 14.4" stroke="#fff4c2" stroke-width="1.5"/>
+</svg>

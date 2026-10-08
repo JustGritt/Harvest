@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<!-- stalks: dark outline stroke under a coloured stroke -->
+	<g stroke="#3b271b" stroke-width="4.5">
+		<path d="M24 42 C24 35 24 30 24 25"/>
+		<path d="M23 42 C21.5 36 19 31 16.5 27"/>
+		<path d="M25 42 C26.5 36 29 31 31.5 27"/>
+	</g>
+	<g stroke="#639a35" stroke-width="2">
+		<path d="M24 42 C24 35 24 30 24 25"/>
+		<path d="M23 42 C21.5 36 19 31 16.5 27"/>
+		<path d="M25 42 C26.5 36 29 31 31.5 27"/>
+	</g>
+	<!-- heads -->
+	<g transform="translate(24 19)">
+		<ellipse rx="3.4" ry="6.5" fill="#a3cc72" stroke="#3b271b" stroke-width="2"/>
+		<ellipse cx="-1.1" cy="-2" rx="1" ry="2.6" fill="#c6e0a3"/>
+		<path d="M-2 0.5 L0 2 L2 0.5 M-2 -3 L0 -1.5 L2 -3" stroke="#639a35" stroke-width="1.2"/>
+	</g>
+	<g transform="translate(15 22) rotate(-24)">
+		<ellipse rx="3.2" ry="6" fill="#a3cc72" stroke="#3b271b" stroke-width="2"/>
+		<ellipse cx="-1" cy="-1.8" rx="0.9" ry="2.4" fill="#c6e0a3"/>
+		<path d="M-1.9 0.5 L0 2 L1.9 0.5 M-1.9 -3 L0 -1.5 L1.9 -3" stroke="#639a35" stroke-width="1.2"/>
+	</g>
+	<g transform="translate(33 22) rotate(24)">
+		<ellipse rx="3.2" ry="6" fill="#a3cc72" stroke="#3b271b" stroke-width="2"/>
+		<ellipse cx="-1" cy="-1.8" rx="0.9" ry="2.4" fill="#c6e0a3"/>
+		<path d="M-1.9 0.5 L0 2 L1.9 0.5 M-1.9 -3 L0 -1.5 L1.9 -3" stroke="#639a35" stroke-width="1.2"/>
+	</g>
+	<!-- base leaves -->
+	<path d="M23 42 C19 38.5 15 37 10.5 37 C14.5 34.5 20 35.5 23.8 39.5 Z" fill="#80b44c" stroke="#3b271b" stroke-width="2"/>
+	<path d="M25 42 C28.5 38.5 32.5 37 37.5 37 C33.5 34.5 28 35.5 24.2 39.5 Z" fill="#639a35" stroke="#3b271b" stroke-width="2"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<!-- mound -->
+	<path d="M11 42 C13 35.5 18 32 24 32 C30 32 35 35.5 37 42 Z" fill="#ad7f4f" stroke="#3b271b" stroke-width="2"/>
+	<path d="M30 35 C33 36.5 34.8 39 35.6 41 L29 41 C30.5 39 30.8 37 30 35 Z" fill="#8e6238"/>
+	<path d="M15.5 38 C17 35.5 19.5 34 22 33.7" stroke="#c9a274" stroke-width="2"/>
+	<!-- seed -->
+	<g transform="rotate(-18 24 30)">
+		<ellipse cx="24" cy="30" rx="3" ry="4" fill="#fcd34d" stroke="#3b271b" stroke-width="2"/>
+		<ellipse cx="23" cy="28.8" rx="0.9" ry="1.6" fill="#fff4c2"/>
+	</g>
+	<!-- pebbles -->
+	<circle cx="17.5" cy="40" r="1" fill="#5a3b22"/>
+	<circle cx="31" cy="39.5" r="0.9" fill="#5a3b22"/>
+</svg>

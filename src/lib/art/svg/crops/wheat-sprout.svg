@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<!-- blades -->
+	<path d="M23 40 C19.5 36.5 16 34 12.5 32.5 C17 31.5 21 33.5 23.8 37.5 Z" fill="#80b44c" stroke="#3b271b" stroke-width="2"/>
+	<path d="M25 40 C28 36 31.5 33.5 35.5 32.5 C32 31 27.5 33 24.3 37.5 Z" fill="#639a35" stroke="#3b271b" stroke-width="2"/>
+	<path d="M24 40 C21.5 33 22 26 25 19.5 C28 26 27.5 33 24 40 Z" fill="#80b44c" stroke="#3b271b" stroke-width="2"/>
+	<path d="M24.6 36 C23.6 31 23.8 26.5 25 23" stroke="#a3cc72" stroke-width="1.5"/>
+	<!-- mound -->
+	<path d="M14 42 C16 38.5 20 37 24 37 C28 37 32 38.5 34 42 Z" fill="#ad7f4f" stroke="#3b271b" stroke-width="2"/>
+	<path d="M17.5 40.2 C19 39 20.5 38.6 22 38.5" stroke="#c9a274" stroke-width="1.5"/>
+</svg>
