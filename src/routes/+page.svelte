@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
+	import { tweened } from 'svelte/motion';
+	import { backOut, cubicOut } from 'svelte/easing';
+	import { fade } from 'svelte/transition';
 	import { gameStore } from '$lib/store';
 	import { BALANCE } from '$lib/data/balance';
 	import { CROPS, CROP_ORDER } from '$lib/data/crops';
@@ -12,9 +15,10 @@
 	import Panel from '$lib/components/Panel.svelte';
 	import MoneyDisplay from '$lib/components/MoneyDisplay.svelte';
 	import Plot from '$lib/components/Plot.svelte';
-	import { burst, centerOf, coinCount, flyCoins, pluck } from '$lib/fx/fx';
+	import { burst, centerOf, coinCount, flyCoins, pluck, reducedMotion } from '$lib/fx/fx';
+	import { replay } from '$lib/fx/replay';
 	import fenceFrame from '$lib/art/svg/field/fence-frame.svg?url';
-	import type { Cell, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
+	import type { Cell, CropId, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 	import {
 		cropRate,
 		describeEffect,
@@ -98,6 +102,35 @@
 	}
 
 	let offline: OfflineReport | null = null;
+	const welcomeEarned = tweened(0, { easing: cubicOut });
+
+	function collect(event: MouseEvent) {
+		const from = centerOf((event.currentTarget as HTMLElement).getBoundingClientRect());
+		offline = null;
+		flyCoins(from, 5).then(() => moneyBump++);
+	}
+
+	// Plots added by Expand Field grow in, staggered
+	let fieldReady = false;
+	function growIn(_node: Element, { delay }: { delay: number }) {
+		if (!fieldReady || reducedMotion()) return { duration: 0 };
+		return {
+			delay,
+			duration: 350,
+			css: (t: number) => `transform: scale(${backOut(t)}); opacity: ${Math.min(1, t * 2)}`
+		};
+	}
+
+	// Unlocking a crop: sparkle burst, and the new seed card pops in
+	let justUnlocked: CropId | null = null;
+	function unlock(id: CropId, event: MouseEvent) {
+		const at = centerOf((event.currentTarget as HTMLElement).getBoundingClientRect());
+		gameStore.unlockCrop(id);
+		if (!get(gameStore).unlockedCrops.includes(id)) return;
+		justUnlocked = id;
+		burst(at, { art: 'sparkle', count: 10, spread: 70, size: 22 });
+		burst(at, { art: 'petal', count: 6, spread: 50, size: 16 });
+	}
 
 	// Dialog buttons
 	const BTN = 'rounded-lg border-2 px-3 py-1.5 font-semibold transition';
@@ -141,7 +174,12 @@
 
 	onMount(() => {
 		const report = gameStore.load();
-		if (report && report.earned > 0 && report.elapsed >= 60_000) offline = report;
+		if (report && report.earned > 0 && report.elapsed >= 60_000) {
+			offline = report;
+			welcomeEarned.set(report.earned, { duration: reducedMotion() ? 0 : 1200 });
+		}
+		// New plots grow in from now on, not on first load
+		requestAnimationFrame(() => (fieldReady = true));
 		// Subscribed after load so offline catch-up doesn't spawn pops
 		const stopPops = gameStore.onHarvest(addPop);
 
@@ -202,9 +240,21 @@
 	// Which confirmation dialog is open
 	let confirming: 'sell' | 'reset' | 'import' | null = null;
 
+	// Selling the farm: a golden sunrise covers the field while the run resets underneath
+	let sunrise = false;
 	function sellFarm() {
 		confirming = null;
-		gameStore.prestige();
+		if (reducedMotion()) {
+			gameStore.prestige();
+			return;
+		}
+		sunrise = true;
+		burst(
+			{ x: innerWidth / 2, y: innerHeight / 2 },
+			{ art: 'legacy-seed', count: 12, spread: 170, size: 36, duration: 900 }
+		);
+		setTimeout(() => gameStore.prestige(), 450);
+		setTimeout(() => (sunrise = false), 1300);
 	}
 
 	function hardReset() {
@@ -256,7 +306,7 @@
 	{#if offline}
 		<p>While you were away for <b>{formatDuration(offline.elapsed)}</b>, your farm earned</p>
 		<p class="font-display text-gold-700 text-center text-3xl font-semibold tabular-nums">
-			+{formatNumber(offline.earned)}
+			+{formatNumber($welcomeEarned)}
 			<Art id="coin" label="money" />
 		</p>
 		{#if offline.elapsed > BALANCE.maxOfflineMs}
@@ -265,7 +315,7 @@
 			</p>
 		{/if}
 	{/if}
-	<button slot="actions" class="{BTN} {BTN_LEAF}" on:click={() => (offline = null)}>Collect</button>
+	<button slot="actions" class="{BTN} {BTN_LEAF}" on:click={collect}>Collect</button>
 </Dialog>
 
 <Dialog
@@ -336,6 +386,20 @@
 
 <svelte:window on:keydown={onKeydown} />
 
+{#if sunrise}
+	<div
+		class="from-gold-100 to-gold-300 fixed inset-0 z-[35] grid place-items-center bg-linear-to-b"
+		in:fade={{ duration: 400 }}
+		out:fade={{ duration: 700 }}
+		role="status"
+	>
+		<div class="flex flex-col items-center gap-2">
+			<span class="motion-safe:animate-pop"><Art id="sunrise" size="8rem" /></span>
+			<p class="font-display text-wood-800 text-2xl font-semibold">A new season begins</p>
+		</div>
+	</div>
+{/if}
+
 <section
 	class="relative flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:flex-row lg:pb-0"
 >
@@ -344,9 +408,9 @@
 			<p
 				class="border-wood-600 bg-parchment-100 mx-auto mb-2 max-w-3xl rounded-lg border-2 px-3 py-1.5 text-center text-sm shadow-sm"
 			>
-				<Art id="pointer" size="1.4em" /> Tap an empty plot to plant {CROPS[
-					game.selectedCrop
-				].name.toLowerCase()}, then tap it again when it glows to harvest.
+				<span class="motion-safe:animate-bob inline-block"><Art id="pointer" size="1.4em" /></span>
+				Tap an empty plot to plant {CROPS[game.selectedCrop].name.toLowerCase()}, then tap it again
+				when it glows to harvest.
 			</p>
 		{/if}
 		<!-- Fence around the field (9-slice border image) -->
@@ -356,14 +420,16 @@
 		>
 			{#each game.field as row, r (r)}
 				{#each row as cell, c (cell.id)}
-					<Plot
-						{cell}
-						{now}
-						selectedCrop={game.selectedCrop}
-						value={cell.crop ? harvestValue(cell.crop, game) : 0}
-						pops={pops.filter((p) => p.cellId === cell.id)}
-						on:click={(e) => clickCell(r, c, cell, e.currentTarget as HTMLElement)}
-					/>
+					<div in:growIn={{ delay: (r + c) * 40 }}>
+						<Plot
+							{cell}
+							{now}
+							selectedCrop={game.selectedCrop}
+							value={cell.crop ? harvestValue(cell.crop, game) : 0}
+							pops={pops.filter((p) => p.cellId === cell.id)}
+							on:click={(e) => clickCell(r, c, cell, e.currentTarget as HTMLElement)}
+						/>
+					</div>
 				{/each}
 			{/each}
 		</div>
@@ -405,6 +471,7 @@
 							class="flex w-full items-center gap-2.5 rounded-lg border-2 px-2 py-1.5 text-left transition {selected
 								? 'border-gold-500 bg-gold-100 shadow-[0_0_0_2px_var(--color-gold-200)]'
 								: 'border-soil-200 bg-parchment-50 hover:border-wood-400'}"
+							class:motion-safe:animate-pop={justUnlocked === id}
 							aria-pressed={selected}
 							on:click={() => gameStore.selectCrop(id)}
 						>
@@ -423,7 +490,7 @@
 								</span>
 							</span>
 							{#if selected}
-								<Art id="check" size="1.25rem" />
+								<span class="motion-safe:animate-pop"><Art id="check" size="1.25rem" /></span>
 							{/if}
 						</button>
 					{:else}
@@ -436,7 +503,7 @@
 							)} per harvest"
 							cost={crop.unlockCost}
 							money={game.money}
-							on:click={() => gameStore.unlockCrop(id)}
+							on:click={(e) => unlock(id, e)}
 						/>
 					{/if}
 				{/each}
@@ -601,7 +668,9 @@
 			aria-pressed={active}
 			on:click={() => (activeTab = active ? null : tab.id)}
 		>
-			<Art id={tab.icon} size="1.6rem" />
+			<span use:replay={{ key: active, cls: 'motion-safe:animate-pop', when: active }}>
+				<Art id={tab.icon} size="1.6rem" />
+			</span>
 			{tab.label}
 			{#if tab.alert}
 				<span

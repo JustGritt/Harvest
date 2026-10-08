@@ -21,14 +21,20 @@ src/
 │   │   └── upgrades.ts             UPGRADES definitions (cost, growth, max, category) + UPGRADE_ORDER
 │   ├── utils/gameUtils.ts          Every formula (one copy each), field helpers, number formatting
 │   ├── store.ts                    gameStore: state, simulation step, actions, save/load
+│   ├── art/                        SVG sprites (svg/<family>/*.svg), sprite sheet, Art.svelte, ids (see docs/art-style.md)
+│   ├── fx/
+│   │   ├── fx.ts                   Particles (burst, pluck, flyCoins), moneyTarget action, coinCount
+│   │   ├── FxLayer.svelte          Fixed overlay the particles are drawn in
+│   │   └── replay.ts               Action that replays a one-shot animation when a key changes
 │   └── components/
 │       ├── BuyButton.svelte        Purchase row for upgrades and crop unlocks (affordability fill, MAX)
 │       ├── Dialog.svelte           Modal on native <dialog> (confirmations, welcome back)
-│       ├── MoneyDisplay.svelte     Money + income/s, bumps on player harvests
+│       ├── MoneyDisplay.svelte     Money (counts up) + income/s, bumps when harvest coins land
 │       ├── Panel.svelte            Parchment card with a wood header strip
 │       └── Plot.svelte             One field plot: soil tile, growth-stage sprite, ready glow, harvest pops
 └── routes/
-    ├── +layout.svelte              Imports app.css, sets <title>; meadow-background <main>
+    ├── +layout.svelte              Imports app.css, sets <title>, mounts the sprite sheet and FX layer
+    ├── art/                        Dev-only sprite contact sheet (/art)
     ├── +page.ts                    ssr = false (state comes from localStorage)
     ├── +page.svelte                Game UI: field grid, sidebar, game loop, autosave
     └── emb/                        Experimental third-party embed page (markspot.app), not part of the game
@@ -92,9 +98,30 @@ data/*.ts ──▶ utils/gameUtils.ts (formulas) ──▶ store.ts (state + ac
 
 - Cozy farm look with hand-drawn SVG sprites for every icon (`<Art id=…>`, see `docs/art-style.md`), never emoji. Upgrade sprites come from `UPGRADE_ART`, crop sprites from `cropArt(crop, stage)`. Colours are `@theme` tokens in `src/app.css`: `soil` (plots), `leaf` (affordable actions), `parchment` (panels), `wood` (headers, borders, bars), `gold` (money, ready crops, selection, Legacy) and `berry` (danger). Use the tokens, not raw Tailwind hues, so a dark theme only has to redefine them.
 - `font-display` (Fredoka, self-hosted through fontsource) for titles and big numbers. Numbers that change use `tabular-nums`.
-- Custom utilities: `bg-meadow` (page background), `soil-dry` / `soil-wet` (empty and planted plots).
+- Custom utility `bg-meadow` (page background). Plots use the `soil-dry` / `soil-wet` tile sprites and the field sits in `fence-frame` as a 9-slice `border-image`.
 - Purchases use `BuyButton`: leaf green when affordable, a gold fill toward the cost when not, a MAX badge when maxed.
 - Per-crop colour comes from `CropDef.tint`.
+
+### Interactions
+
+Player actions get juicy feedback; worker actions stay quiet so an automated field doesn't turn into noise.
+
+| Where                  | What happens                                                                                                                                                                           |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plot                   | Squashes on press, lifts on hover. Seeds drop in, crops pop at each new stage, ripe crops sway with a staggered glint.                                                                 |
+| Player plant / harvest | Dirt burst / the crop plucks out and 1–5 coins (`coinCount`) fly to the money counter, which bumps as they land and counts up. Farmer and planter actions only get the small text pop. |
+| BuyButton              | Shine and icon pop on every purchase, a shine when it becomes affordable.                                                                                                              |
+| Seeds                  | The check pops on select; unlocking bursts sparkles and petals and pops in the new card.                                                                                               |
+| Field                  | Plots added by Expand Field grow in, staggered (not on load).                                                                                                                          |
+| Tabs, hint             | Tab icon pops when opened; the hint's pointer bobs.                                                                                                                                    |
+| Welcome back           | The earned amount counts up; Collect sends coins to the counter.                                                                                                                       |
+| Prestige               | A golden sunrise covers the field with a legacy-seed burst; the run resets at peak opacity.                                                                                            |
+
+How it's built:
+
+- **One-shot CSS animations** live in `@theme` (`animate-pop`, `-plant`, `-bump`, `-shine`…) behind `motion-safe:`. To replay one when something changes, use `use:replay={{ key, cls, when? }}` from `src/lib/fx/replay.ts`. It never plays on mount.
+- **Particles** go through `src/lib/fx/fx.ts`: `burst(point, { art, count, spread, size, arc? })`, `pluck(rect, art)` and `flyCoins(point, count)` (resolves when the first coin lands). They are sprites animated with the Web Animations API in the fixed `FxLayer`, capped at `MAX_PARTICLES`. Coins fly to the visible element marked with `use:moneyTarget`.
+- **Reduced motion:** particles are no-ops, `flyCoins` resolves right away, tweens have zero duration, and all CSS animations are `motion-safe:` only. Every state change stays visible without motion.
 
 ## Adding things
 

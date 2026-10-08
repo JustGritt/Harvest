@@ -27,7 +27,7 @@
 
 <button
 	data-cell={cell.id}
-	class="group border-soil-800/50 relative flex aspect-square touch-manipulation items-center justify-center overflow-hidden rounded-md border-2 pb-1.5 shadow-[inset_0_-3px_0_rgb(0_0_0/0.15)] transition-transform duration-100 select-none hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.94] sm:rounded-lg sm:pb-2 {ready
+	class="group border-soil-800/50 relative flex aspect-square w-full touch-manipulation items-center justify-center overflow-hidden rounded-md border-2 pb-1.5 shadow-[inset_0_-3px_0_rgb(0_0_0/0.15)] transition-transform duration-100 select-none hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.94] sm:rounded-lg sm:pb-2 {ready
 		? 'border-gold-300 shadow-[0_0_12px_var(--color-gold-300),inset_0_0_10px_rgb(255_229_138/0.5)]'
 		: ''}"
 	style={`background: url("${soil}") 0 0 / 28px`}

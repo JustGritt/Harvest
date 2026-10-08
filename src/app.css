@@ -61,6 +61,8 @@
 	--animate-pop: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
 	--animate-sway: sway 2.4s ease-in-out infinite;
 	--animate-glint: glint 2.6s ease-in-out infinite;
+	--animate-shine: shine 0.6s ease-out;
+	--animate-bob: bob 1.2s ease-in-out infinite;
 
 	@keyframes float-up {
 		from {
@@ -116,6 +118,28 @@
 		}
 		50% {
 			transform: rotate(4deg);
+		}
+	}
+
+	/* A light band sweeping across a button */
+	@keyframes shine {
+		from {
+			transform: translateX(-120%) skewX(-20deg);
+			opacity: 1;
+		}
+		to {
+			transform: translateX(380%) skewX(-20deg);
+			opacity: 1;
+		}
+	}
+
+	@keyframes bob {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-3px);
 		}
 	}
 

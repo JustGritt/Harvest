@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Art from '$lib/art/Art.svelte';
 	import type { ArtId } from '$lib/art/ids';
+	import { replay } from '$lib/fx/replay';
 	import { formatNumber } from '$lib/utils/gameUtils';
 
 	export let art: ArtId;
@@ -18,6 +19,8 @@
 
 	$: canAfford = money >= cost;
 	$: fill = Math.min(1, money / cost);
+	// Changes on every purchase (level up, or reaching MAX)
+	$: purchase = `${badge}|${maxed}`;
 </script>
 
 <button
@@ -37,8 +40,22 @@
 			aria-hidden="true"
 		></span>
 	{/if}
+	<!-- Shine sweeps: once per purchase, and once when it becomes affordable -->
+	<span
+		class="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-linear-to-r from-transparent via-white/60 to-transparent opacity-0"
+		use:replay={{ key: purchase, cls: 'motion-safe:animate-shine' }}
+		aria-hidden="true"
+	></span>
+	<span
+		class="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-linear-to-r from-transparent via-white/50 to-transparent opacity-0"
+		use:replay={{ key: canAfford, cls: 'motion-safe:animate-shine', when: canAfford && !maxed }}
+		aria-hidden="true"
+	></span>
 	<span class="relative flex items-center gap-2.5 px-2 py-1.5">
-		<span class="bg-parchment-50 grid size-9 shrink-0 place-items-center rounded-md shadow-inner">
+		<span
+			class="bg-parchment-50 grid size-9 shrink-0 place-items-center rounded-md shadow-inner"
+			use:replay={{ key: purchase, cls: 'motion-safe:animate-pop' }}
+		>
 			<Art id={art} size="1.75rem" />
 		</span>
 		<span class="min-w-0 flex-1 leading-tight">
