@@ -3,6 +3,7 @@ import { BALANCE } from '$lib/data/balance';
 import type { UpgradeLevels } from '$lib/types';
 import {
 	createCell,
+	cropRate,
 	farmerInterval,
 	fieldSize,
 	formatDuration,
@@ -88,6 +89,14 @@ describe('harvestValue', () => {
 		// 10 × 1.2 × 1.1 × 1.3 = 17.16
 		expect(value).toBe(17);
 		expect(Number.isInteger(value)).toBe(true);
+	});
+});
+
+describe('cropRate', () => {
+	it('is harvest value per second of grow time', () => {
+		const state = { upgrades: levels(), legacySeeds: 0 };
+		expect(cropRate('wheat', state)).toBeCloseTo(10 / 3);
+		expect(cropRate('carrot', state)).toBeCloseTo(4);
 	});
 });
 

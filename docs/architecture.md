@@ -22,7 +22,10 @@ src/
 │   ├── utils/gameUtils.ts          Every formula (one copy each), field helpers, number formatting
 │   ├── store.ts                    gameStore: state, simulation step, actions, save/load
 │   └── components/
-│       └── UpgradeButton.svelte    Generic upgrade row (button + description + effect)
+│       ├── BuyButton.svelte        Purchase row for upgrades and crop unlocks (affordability fill, MAX)
+│       ├── MoneyDisplay.svelte     Money + income/s, bumps on player harvests
+│       ├── Panel.svelte            Parchment card with a wood header strip
+│       └── Plot.svelte             One field plot: soil, growth stage, ready glow, harvest pops
 └── routes/
     ├── +layout.svelte              Imports app.css; green full-height <main>
     ├── +page.ts                    ssr = false (state comes from localStorage)

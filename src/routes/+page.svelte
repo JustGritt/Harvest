@@ -4,11 +4,13 @@
 	import { BALANCE } from '$lib/data/balance';
 	import { CROPS, CROP_ORDER } from '$lib/data/crops';
 	import { UPGRADES, UPGRADE_ORDER, type UpgradeCategory } from '$lib/data/upgrades';
-	import UpgradeButton from '$lib/components/UpgradeButton.svelte';
+	import BuyButton from '$lib/components/BuyButton.svelte';
+	import Panel from '$lib/components/Panel.svelte';
 	import MoneyDisplay from '$lib/components/MoneyDisplay.svelte';
 	import Plot from '$lib/components/Plot.svelte';
 	import type { Cell, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 	import {
+		cropRate,
 		describeEffect,
 		farmerInterval,
 		formatDuration,
@@ -23,10 +25,10 @@
 		upgradeCost
 	} from '$lib/utils/gameUtils';
 
-	const SECTIONS: { category: UpgradeCategory; title: string }[] = [
-		{ category: 'workers', title: 'Workers' },
-		{ category: 'growth', title: 'Growth & Value' },
-		{ category: 'field', title: 'Field' }
+	const SECTIONS: { category: UpgradeCategory; title: string; icon: string }[] = [
+		{ category: 'workers', title: 'Workers', icon: '🧑‍🌾' },
+		{ category: 'growth', title: 'Growth & Value', icon: '🌿' },
+		{ category: 'field', title: 'Field', icon: '🚜' }
 	];
 
 	$: game = $gameStore;
@@ -34,6 +36,9 @@
 	$: cols = game.field[0]?.length ?? BALANCE.baseCols;
 	$: gain = prestigeGain(game.runEarned);
 	$: showPrestige = gain > 0 || game.prestigeCount > 0;
+	$: nextSeedProgress =
+		(game.runEarned - prestigeThreshold(gain)) /
+		(prestigeThreshold(gain + 1) - prestigeThreshold(gain));
 
 	// Mobile: the shop lives in a bottom sheet opened from a tab bar. Desktop shows every panel.
 	type Tab = 'seeds' | 'upgrades' | 'legacy' | 'stats';
@@ -260,180 +265,193 @@
 	<section
 		class="{activeTab
 			? 'block'
-			: 'hidden'} fixed inset-x-0 bottom-14 z-20 max-h-[40vh] overflow-y-auto border-t border-green-700 bg-green-100 p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.1)] lg:static lg:block lg:max-h-none lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-4 lg:shadow-none"
+			: 'hidden'} border-wood-600 bg-parchment-200 fixed inset-x-0 bottom-14 z-20 max-h-[45vh] overflow-y-auto rounded-t-2xl border-t-4 p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.15)] lg:static lg:block lg:max-h-none lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-4 lg:shadow-none"
 	>
 		<div
-			class="w-full space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-80 lg:overflow-y-auto lg:rounded lg:border lg:border-green-700 lg:bg-green-100 lg:p-4"
+			class="w-full space-y-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-80 lg:overflow-y-auto lg:pb-1"
 		>
-			<div class="hidden lg:block">
+			<div
+				class="border-wood-600 bg-parchment-100 hidden rounded-xl border-2 px-3 py-2 shadow-md lg:block"
+			>
 				<MoneyDisplay money={game.money} {incomePerSec} bump={moneyBump} />
 			</div>
 
-			<div
-				class="{panelVisibility(
-					'seeds',
-					activeTab
-				)} space-y-2 rounded border border-green-700 bg-white p-2"
-			>
-				<h4 class="font-bold">Seeds</h4>
+			<Panel title="Seeds" icon="🌾" class={panelVisibility('seeds', activeTab)}>
 				{#each CROP_ORDER as id (id)}
 					{@const crop = CROPS[id]}
-					{@const unlocked = game.unlockedCrops.includes(id)}
-					{#if unlocked}
+					{@const selected = game.selectedCrop === id}
+					{#if game.unlockedCrops.includes(id)}
 						<button
-							class="flex w-full items-center justify-between rounded border px-3 py-1.5 text-left hover:bg-green-50"
-							class:border-green-700={game.selectedCrop === id}
-							class:bg-green-50={game.selectedCrop === id}
-							class:border-gray-200={game.selectedCrop !== id}
+							class="flex w-full items-center gap-2.5 rounded-lg border-2 px-2 py-1.5 text-left transition {selected
+								? 'border-gold-500 bg-gold-100 shadow-[0_0_0_2px_var(--color-gold-200)]'
+								: 'border-soil-200 bg-parchment-50 hover:border-wood-400'}"
+							aria-pressed={selected}
 							on:click={() => gameStore.selectCrop(id)}
 						>
-							<span>{crop.icon} {crop.name}</span>
-							<span class="text-xs text-gray-600">
-								{formatSeconds(growTime(id, game.upgrades))} · {formatNumber(
-									harvestValue(id, game)
-								)} 💰
+							<span
+								class="bg-parchment-100 grid size-9 shrink-0 place-items-center rounded-md text-xl shadow-inner"
+								aria-hidden="true">{crop.icon}</span
+							>
+							<span class="min-w-0 flex-1 leading-tight">
+								<span class="block font-semibold">{crop.name}</span>
+								<span class="text-wood-600 block text-xs tabular-nums">
+									{formatSeconds(growTime(id, game.upgrades))} · {formatNumber(
+										harvestValue(id, game)
+									)} 💰 · {formatNumber(cropRate(id, game))}/s per plot
+								</span>
 							</span>
+							{#if selected}
+								<span class="text-gold-600 font-bold" aria-hidden="true">✓</span>
+							{/if}
 						</button>
 					{:else}
-						<button
-							class="flex w-full items-center justify-between rounded bg-blue-500 px-3 py-1.5 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
-							disabled={game.money < crop.unlockCost}
+						<BuyButton
+							icon={crop.icon}
+							name={crop.name}
+							badge="🔒"
+							effect="{formatSeconds(growTime(id, game.upgrades))} · {formatNumber(
+								harvestValue(id, game)
+							)} 💰 per harvest"
+							cost={crop.unlockCost}
+							money={game.money}
 							on:click={() => gameStore.unlockCrop(id)}
-						>
-							<span>🔒 {crop.icon} {crop.name}</span>
-							<span class="text-sm font-bold">{formatNumber(crop.unlockCost)} 💰</span>
-						</button>
+						/>
 					{/if}
 				{/each}
-				<p class="text-xs text-gray-600">
+				<p class="text-wood-600 text-xs">
 					Slower crops earn more per plot and far more per harvest, so they need fewer clicks and
 					workers.
 				</p>
-			</div>
+			</Panel>
 
-			<div class="{panelVisibility('upgrades', activeTab)} space-y-4">
+			<div class="{panelVisibility('upgrades', activeTab)} space-y-3">
 				{#each SECTIONS as section (section.category)}
-					<div class="space-y-3 rounded border border-green-700 bg-white p-2">
-						<h4 class="font-bold">{section.title}</h4>
+					<Panel title={section.title} icon={section.icon}>
 						{#each UPGRADE_ORDER.filter((id) => UPGRADES[id].category === section.category && isVisible(id)) as id (id)}
-							<UpgradeButton
-								def={UPGRADES[id]}
-								level={game.upgrades[id]}
-								cost={upgradeCost(id, game.upgrades[id])}
-								canAfford={game.money >= upgradeCost(id, game.upgrades[id])}
-								maxed={isMaxed(id, game.upgrades[id])}
+							{@const def = UPGRADES[id]}
+							{@const level = game.upgrades[id]}
+							<BuyButton
+								icon={def.icon}
+								name={def.name}
+								badge={def.maxLevel ? `Lv ${level}` : `×${level}`}
 								effect={describeEffect(id, game)}
+								description={def.description}
+								cost={upgradeCost(id, level)}
+								money={game.money}
+								maxed={isMaxed(id, level)}
 								on:click={() => gameStore.buyUpgrade(id)}
 							/>
 						{/each}
-					</div>
+					</Panel>
 				{/each}
 			</div>
 
 			{#if showPrestige}
-				<div
-					class="{panelVisibility(
-						'legacy',
-						activeTab
-					)} space-y-2 rounded border border-purple-700 bg-white p-2"
-				>
-					<h4 class="font-bold">🌟 Legacy</h4>
+				<Panel title="Legacy" icon="🌟" accent="gold" class={panelVisibility('legacy', activeTab)}>
 					<p class="text-sm">
-						{game.legacySeeds} legacy seeds:
-						<b>+{Math.round(game.legacySeeds * BALANCE.legacySeedBonus * 100)}%</b>
-						income
+						<b class="font-display text-base">{game.legacySeeds} 🌟</b> legacy seeds give
+						<b>+{Math.round(game.legacySeeds * BALANCE.legacySeedBonus * 100)}%</b> income.
 					</p>
+					<div>
+						<div class="text-wood-600 flex justify-between text-xs tabular-nums">
+							<span>Next seed</span>
+							<span
+								>{formatNumber(game.runEarned)} / {formatNumber(prestigeThreshold(gain + 1))}</span
+							>
+						</div>
+						<div class="bg-soil-200 mt-0.5 h-2 overflow-hidden rounded-full">
+							<div
+								class="bg-gold-400 h-full rounded-full transition-[width] duration-300"
+								style="width: {nextSeedProgress * 100}%"
+							></div>
+						</div>
+					</div>
 					<button
-						class="w-full rounded bg-purple-600 px-3 py-2 text-white hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
+						class="font-display border-gold-600 bg-gold-400 text-wood-900 hover:bg-gold-300 disabled:border-soil-200 disabled:bg-parchment-50 disabled:text-wood-600 w-full rounded-lg border-2 px-3 py-2 text-lg font-semibold shadow-[0_3px_0_var(--color-gold-600)] transition active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:shadow-none"
 						disabled={gain < 1}
 						on:click={sellFarm}
 					>
 						Sell farm for +{gain} 🌟
 					</button>
-					<p class="text-xs text-gray-600">
-						Next seed at {formatNumber(prestigeThreshold(gain + 1))} 💰 earned this run.
-					</p>
-				</div>
+				</Panel>
 			{/if}
 
-			<div
-				class="{panelVisibility(
-					'stats',
-					activeTab
-				)} rounded border border-green-700 bg-white p-2 text-sm"
-			>
-				<h4 class="mb-2 font-bold">Stats</h4>
-				<div class="flex justify-between">
-					Farmers <b>{game.upgrades.farmer} · {formatSeconds(farmerInterval(game.upgrades))} each</b
-					>
-				</div>
-				<div class="flex justify-between">
-					Seed planters
-					<b>{game.upgrades.seedPlanter} · {formatSeconds(planterInterval(game.upgrades))} each</b>
-				</div>
-				<div class="flex justify-between">
-					Field <b>{cols} × {game.field.length}</b>
-				</div>
-				<div class="flex justify-between">
-					This run <b>{formatDuration(now - game.runStartedAt)}</b>
-				</div>
-				<div class="flex justify-between">
-					Earned this run <b>{formatNumber(game.runEarned)}</b>
-				</div>
-				<div class="flex justify-between">
-					Lifetime earned <b>{formatNumber(game.lifetimeEarned)}</b>
-				</div>
-				<div class="flex justify-between">
-					Crops harvested <b>{formatNumber(game.totalHarvested)}</b>
-				</div>
-				{#if game.prestigeCount > 0}
-					<div class="flex justify-between">
-						Farms sold <b>{game.prestigeCount}</b>
+			<Panel title="Stats" icon="📊" class="{panelVisibility('stats', activeTab)} text-sm">
+				<dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 tabular-nums">
+					<dt>Farmers</dt>
+					<dd class="font-semibold">
+						{game.upgrades.farmer} · {formatSeconds(farmerInterval(game.upgrades))} each
+					</dd>
+					<dt>Seed planters</dt>
+					<dd class="font-semibold">
+						{game.upgrades.seedPlanter} · {formatSeconds(planterInterval(game.upgrades))} each
+					</dd>
+					<dt>Field</dt>
+					<dd class="font-semibold">{cols} × {game.field.length}</dd>
+					<dt>This run</dt>
+					<dd class="font-semibold">{formatDuration(now - game.runStartedAt)}</dd>
+					<dt>Earned this run</dt>
+					<dd class="font-semibold">{formatNumber(game.runEarned)}</dd>
+					<dt>Lifetime earned</dt>
+					<dd class="font-semibold">{formatNumber(game.lifetimeEarned)}</dd>
+					<dt>Crops harvested</dt>
+					<dd class="font-semibold">{formatNumber(game.totalHarvested)}</dd>
+					{#if game.prestigeCount > 0}
+						<dt>Farms sold</dt>
+						<dd class="font-semibold">{game.prestigeCount}</dd>
+					{/if}
+				</dl>
+
+				<div class="border-soil-200 mt-1 border-t-2 border-dashed pt-2">
+					<h3 class="font-display mb-1.5 font-semibold">⚙️ Save</h3>
+					<div class="flex gap-2 text-xs">
+						<button
+							class="border-wood-500 text-wood-700 hover:bg-parchment-200 rounded-md border-2 px-2 py-1 font-semibold"
+							aria-expanded={showTransfer}
+							on:click={() => {
+								showTransfer = !showTransfer;
+								transferStatus = null;
+							}}
+						>
+							{showTransfer ? 'Hide export / import' : 'Export / import'}
+						</button>
+						<button
+							class="border-berry-500 text-berry-600 hover:bg-berry-100 rounded-md border-2 px-2 py-1 font-semibold"
+							on:click={hardReset}>Reset save</button
+						>
 					</div>
-				{/if}
-				<div class="mt-2 flex gap-3 text-xs">
-					<button
-						class="text-green-800 hover:underline"
-						on:click={() => {
-							showTransfer = !showTransfer;
-							transferStatus = null;
-						}}
-					>
-						{showTransfer ? 'Hide' : 'Export / import'}
-					</button>
-					<button class="text-red-600 hover:underline" on:click={hardReset}>Reset save</button>
-				</div>
-				{#if showTransfer}
-					<div class="mt-2 space-y-2">
-						<textarea
-							bind:value={transferText}
-							rows="3"
-							class="w-full rounded border border-gray-300 p-1 font-mono text-xs break-all"
-							placeholder="Paste an exported save here"
-							aria-label="Save text"
-						></textarea>
-						<div class="flex gap-2">
-							<button
-								class="flex-1 rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
-								on:click={exportSave}>Export</button
-							>
-							<button
-								class="flex-1 rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
-								on:click={importSave}>Import</button
-							>
+					{#if showTransfer}
+						<div class="mt-2 space-y-2">
+							<textarea
+								bind:value={transferText}
+								rows="3"
+								class="border-soil-200 bg-parchment-50 w-full rounded-md border-2 p-1 font-mono text-xs break-all"
+								placeholder="Paste an exported save here"
+								aria-label="Save text"
+							></textarea>
+							<div class="flex gap-2">
+								<button
+									class="bg-leaf-600 hover:bg-leaf-700 flex-1 rounded-md px-2 py-1 text-xs font-semibold text-white"
+									on:click={exportSave}>Export</button
+								>
+								<button
+									class="bg-wood-500 hover:bg-wood-600 flex-1 rounded-md px-2 py-1 text-xs font-semibold text-white"
+									on:click={importSave}>Import</button
+								>
+							</div>
+							{#if transferStatus}
+								<p
+									class="text-xs"
+									class:text-leaf-700={transferStatus.ok}
+									class:text-berry-600={!transferStatus.ok}
+								>
+									{transferStatus.message}
+								</p>
+							{/if}
 						</div>
-						{#if transferStatus}
-							<p
-								class="text-xs"
-								class:text-green-700={transferStatus.ok}
-								class:text-red-600={!transferStatus.ok}
-							>
-								{transferStatus.message}
-							</p>
-						{/if}
-					</div>
-				{/if}
-			</div>
+					{/if}
+				</div>
+			</Panel>
 		</div>
 	</section>
 </section>

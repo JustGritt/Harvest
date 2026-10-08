@@ -49,6 +49,11 @@
 	--color-gold-600: #b77706;
 	--color-gold-700: #8f5a09;
 
+	--color-berry-100: #fde8e6;
+	--color-berry-500: #d1453b;
+	--color-berry-600: #b3352c;
+	--color-berry-700: #8f2a23;
+
 	--animate-float-up: float-up 0.9s ease-out forwards;
 	--animate-fade-out: fade-out 0.9s ease-out forwards;
 	--animate-ready: ready 1.4s ease-in-out infinite;

@@ -77,6 +77,11 @@ export function harvestValue(crop: CropId, state: Pick<GameState, 'upgrades' | '
 	return Math.round(CROPS[crop].value * valueMultiplier(state));
 }
 
+/** Money per second one plot earns with this crop, ignoring time spent empty. */
+export function cropRate(crop: CropId, state: Pick<GameState, 'upgrades' | 'legacySeeds'>) {
+	return harvestValue(crop, state) / (growTime(crop, state.upgrades) / 1000);
+}
+
 export function farmerInterval(upgrades: UpgradeLevels): number {
 	return BALANCE.workerBaseInterval * BALANCE.workerSpeedFactor ** upgrades.farmerTraining;
 }
