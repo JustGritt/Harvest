@@ -1,9 +1,11 @@
 <script lang="ts">
 	import Art from '$lib/art/Art.svelte';
+	import CropArt from '$lib/art/CropArt.svelte';
 	import { cropArt } from '$lib/art/ids';
 	import soilDry from '$lib/art/svg/field/soil-dry.svg?url';
 	import soilWet from '$lib/art/svg/field/soil-wet.svg?url';
 	import { CROPS } from '$lib/data/crops';
+	import { MUTATIONS } from '$lib/data/mutations';
 	import { replay } from '$lib/fx/replay';
 	import { COMBO_LABEL_FROM } from '$lib/fx/streak';
 	import type { Cell, CropId, HarvestEvent } from '$lib/types';
@@ -23,9 +25,12 @@
 	$: stage = growStage(progress);
 	$: ready = cell.status === 'ready';
 	$: soil = cell.status === 'empty' ? soilDry : soilWet;
-	// Offsets each plot's ready glint so a field of ripe crops doesn't sparkle in sync
+	// A mutation shows once the seed sprouts
+	$: mutation =
+		cell.mutation && (ready || stage.stage !== 'seed') ? MUTATIONS[cell.mutation] : null;
 	// The plot thumps each time the player reaps it
 	$: lastReap = pops.findLast((p) => !p.auto)?.key;
+	// Offsets each plot's glint so a field of ripe crops doesn't sparkle in sync
 	$: glintDelay = -([...cell.id].reduce((h, ch) => h * 31 + ch.charCodeAt(0), 7) % 2600);
 </script>
 
@@ -34,9 +39,9 @@
 	class="group border-soil-800/50 relative flex aspect-square w-full touch-none items-center justify-center overflow-hidden rounded-md border-2 pb-1.5 shadow-[inset_0_-3px_0_rgb(0_0_0/0.15)] transition-transform duration-100 select-none hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.94] sm:rounded-lg sm:pb-2 {ready
 		? 'border-gold-300 shadow-[0_0_12px_var(--color-gold-300),inset_0_0_10px_rgb(255_229_138/0.5)]'
 		: ''}"
-	style={`background: url("${soil}") 0 0 / 28px`}
+	style={`background: url("${soil}") 0 0 / 28px;${ready && mutation ? ` border-color: ${mutation.tint};` : ''}`}
 	aria-label={crop
-		? `${crop.name}, ${cell.status}`
+		? `${mutation ? `${mutation.name} ` : ''}${crop.name}, ${cell.status}`
 		: `Empty plot, plant ${CROPS[selectedCrop].name}`}
 	use:replay={{ key: lastReap, cls: 'motion-safe:animate-thump', when: lastReap !== undefined }}
 	on:pointerdown
@@ -63,9 +68,10 @@
 							class="block size-full origin-bottom transition-transform duration-300"
 							style="transform: scale({ready ? 1.05 : stage.scale})"
 						>
-							<Art
-								id={cropArt(crop.id, ready ? 'mature' : stage.stage)}
-								size="100%"
+							<CropArt
+								crop={crop.id}
+								stage={ready ? 'mature' : stage.stage}
+								mutation={mutation?.id ?? null}
 								class="drop-shadow-[0_2px_1px_rgb(0_0_0/0.25)]"
 							/>
 						</span>
@@ -73,15 +79,20 @@
 				</span>
 			</span>
 		{/key}
-		{#if ready}
+		{#if ready || mutation?.id === 'golden'}
 			<span
 				class="motion-safe:animate-glint absolute top-[12%] right-[14%] hidden size-[24%] motion-safe:block"
 				style="animation-delay: {glintDelay}ms"
 			>
 				<Art id="sparkle" size="100%" />
 			</span>
+		{/if}
+		{#if ready}
 			<span
-				class="font-display bg-parchment-100/90 text-gold-700 absolute bottom-1 hidden rounded px-1.5 text-xs font-semibold tabular-nums sm:block"
+				class="font-display absolute bottom-1 hidden rounded px-1.5 text-xs font-semibold tabular-nums sm:block {mutation
+					? 'text-white'
+					: 'bg-parchment-100/90 text-gold-700'}"
+				style:background={mutation?.tint}
 			>
 				+{formatNumber(value)}
 			</span>
@@ -97,7 +108,9 @@
 	{#each pops as pop (pop.key)}
 		{#if pop.auto}
 			<span
-				class="motion-safe:animate-float-up motion-reduce:animate-fade-out text-parchment-100 pointer-events-none absolute top-1/4 left-1/2 z-[1] -translate-x-1/2 text-xs whitespace-nowrap tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.6)]"
+				class="motion-safe:animate-float-up motion-reduce:animate-fade-out pointer-events-none absolute top-1/4 left-1/2 z-[1] -translate-x-1/2 text-xs whitespace-nowrap tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.6)] {pop.mutation
+					? 'text-gold-200 font-semibold'
+					: 'text-parchment-100'}"
 			>
 				+{formatNumber(pop.value)}
 			</span>
@@ -106,6 +119,11 @@
 			<span
 				class="motion-reduce:animate-fade-out font-display pointer-events-none absolute top-1/4 left-1/2 z-[1] hidden -translate-x-1/2 flex-col items-center leading-none whitespace-nowrap tabular-nums motion-reduce:flex"
 			>
+				{#if pop.mutation}
+					<span class="mb-0.5 text-xs font-bold" style:color={MUTATIONS[pop.mutation].tint}>
+						{MUTATIONS[pop.mutation].name}!
+					</span>
+				{/if}
 				<span
 					class="text-gold-100 text-sm font-bold [-webkit-text-stroke:3px_var(--color-wood-900)] [paint-order:stroke_fill] sm:text-xl"
 				>

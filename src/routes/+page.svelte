@@ -8,6 +8,7 @@
 	import { BALANCE } from '$lib/data/balance';
 	import { CROPS, CROP_ORDER } from '$lib/data/crops';
 	import { UPGRADES, UPGRADE_ORDER, type UpgradeCategory } from '$lib/data/upgrades';
+	import { MUTATIONS, MUTATION_ORDER } from '$lib/data/mutations';
 	import Art from '$lib/art/Art.svelte';
 	import { cropArt, UPGRADE_ART, type ArtId } from '$lib/art/ids';
 	import BuyButton from '$lib/components/BuyButton.svelte';
@@ -28,7 +29,14 @@
 	import { COMBO_LABEL_FROM, NO_STREAK, nextStreak, streakHype, type Streak } from '$lib/fx/streak';
 	import { replay } from '$lib/fx/replay';
 	import fenceFrame from '$lib/art/svg/field/fence-frame.svg?url';
-	import type { Cell, CropId, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
+	import type {
+		Cell,
+		CropId,
+		HarvestEvent,
+		MutationId,
+		OfflineReport,
+		UpgradeId
+	} from '$lib/types';
 	import {
 		cropRate,
 		describeEffect,
@@ -245,19 +253,21 @@
 			}
 			return;
 		}
-		const crop = cell.crop;
+		const { crop, mutation } = cell;
 		const before = get(gameStore).runEarned;
 		gameStore.harvestCrop(r, c);
 		const earned = get(gameStore).runEarned - before;
 		if (earned <= 0 || !crop) return;
-		reapFx(rect, crop, earned);
+		reapFx(rect, crop, earned, mutation);
 	}
 
 	// Coins go first: decorative bursts leave them room under the particle cap
-	function reapFx(rect: DOMRect, crop: CropId, earned: number) {
+	function reapFx(rect: DOMRect, crop: CropId, earned: number, mutation: MutationId | null) {
 		const at = centerOf(rect);
 		const w = rect.width;
 		const hype = streakHype(streak.count);
+		// 0 for an ordinary crop, then 1, 2, 3… for rarer mutations
+		const tier = mutation ? MUTATION_ORDER.indexOf(mutation) + 1 : 0;
 		const coins = coinCount(earned);
 		let left = earned;
 		pendingMoney += earned;
@@ -269,8 +279,12 @@
 				moneyBump++;
 			}
 		});
-		pluck(rect, cropArt(crop, 'mature'));
-		ring(at, w * (1.1 + hype * 0.6));
+		pluck(rect, cropArt(crop, 'mature'), mutation === 'golden' ? 'url(#mut-golden)' : '');
+		ring(at, w * (1.1 + hype * 0.6 + tier * 0.35));
+		if (tier >= 2) ring(at, w * (0.8 + tier * 0.4));
+		if (mutation === 'golden') {
+			burst(at, { art: 'coin', count: 8, spread: w * 1.1, size: w * 0.24, duration: 800 });
+		}
 		burst(at, {
 			art: 'leaf',
 			count: 3 + Math.round(hype * 3),
@@ -279,8 +293,8 @@
 		});
 		burst(at, {
 			art: 'sparkle',
-			count: 3 + Math.round(hype * 5),
-			spread: w * (0.5 + hype * 0.4),
+			count: 3 + Math.round(hype * 5) + tier * 3,
+			spread: w * (0.5 + hype * 0.4 + tier * 0.25),
 			size: w * 0.22
 		});
 		burst(
@@ -288,8 +302,10 @@
 			{ art: 'dirt', count: 3, spread: w * 0.35, size: w * 0.15, arc: Math.PI * 0.8 }
 		);
 		floatText({ x: at.x, y: rect.top + rect.height * 0.2 }, `+${formatNumber(earned)}`, {
-			scale: 1 + hype * 0.5,
-			combo: streak.count >= COMBO_LABEL_FROM ? streak.count : 0
+			scale: 1 + hype * 0.5 + tier * 0.15,
+			combo: streak.count >= COMBO_LABEL_FROM ? streak.count : 0,
+			label: mutation ? `${MUTATIONS[mutation].name}!` : '',
+			labelColor: mutation ? MUTATIONS[mutation].tint : ''
 		});
 	}
 

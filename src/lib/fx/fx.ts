@@ -151,11 +151,12 @@ export function ring(at: Point, size: number) {
  * A harvested crop yanked out of its plot: a quick squash, then it stretches up and is tossed
  * to a random side with a spin, shrinking away.
  */
-export function pluck(rect: DOMRect, art: ArtId) {
+export function pluck(rect: DOMRect, art: ArtId, filter = '') {
 	if (reducedMotion()) return;
 	const size = rect.width * 0.78;
 	const el = spawn(art, centerOf(rect), size);
 	if (!el) return;
+	el.style.filter = filter;
 	el.style.transformOrigin = '50% 85%';
 	const side = Math.random() < 0.5 ? -1 : 1;
 	play(
@@ -181,13 +182,26 @@ export function pluck(rect: DOMRect, art: ArtId) {
  * The player's "+N" over a reaped plot, with a "×N" chip during a streak. It lives in the FX
  * layer so it can rise past the plot's edge and above the plucked crop. `scale` grows it.
  */
-export function floatText(at: Point, text: string, { scale = 1, combo = 0 } = {}) {
+export function floatText(
+	at: Point,
+	text: string,
+	{ scale = 1, combo = 0, label = '', labelColor = '' } = {}
+) {
 	if (reducedMotion() || !layer) return;
 	const el = document.createElement('div');
 	el.setAttribute('aria-hidden', 'true');
 	el.className =
 		'font-display absolute flex flex-col items-center leading-none font-bold whitespace-nowrap tabular-nums';
 	el.style.cssText = `left:${at.x}px;top:${at.y}px;font-size:${scale}rem;will-change:transform,opacity`;
+	if (label) {
+		// A mutation's name above the value, e.g. "Golden!"
+		const tag = document.createElement('span');
+		tag.className =
+			'mb-0.5 text-sm [-webkit-text-stroke:3px_var(--color-wood-900)] [paint-order:stroke_fill] sm:text-base';
+		tag.style.color = labelColor;
+		tag.textContent = label;
+		el.append(tag);
+	}
 	const value = document.createElement('span');
 	value.className =
 		'text-gold-100 text-lg [-webkit-text-stroke:4px_var(--color-wood-900)] [paint-order:stroke_fill] sm:text-2xl';
