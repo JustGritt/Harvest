@@ -3,7 +3,7 @@
 	import { get } from 'svelte/store';
 	import { tweened } from 'svelte/motion';
 	import { backOut, cubicOut } from 'svelte/easing';
-	import { fade } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 	import { gameStore } from '$lib/store';
 	import { BALANCE } from '$lib/data/balance';
 	import { CROPS, CROP_ORDER } from '$lib/data/crops';
@@ -14,6 +14,8 @@
 	import BuyButton from '$lib/components/BuyButton.svelte';
 	import Dialog from '$lib/components/Dialog.svelte';
 	import Panel from '$lib/components/Panel.svelte';
+	import Almanac from '$lib/components/Almanac.svelte';
+	import CropArt from '$lib/art/CropArt.svelte';
 	import MoneyDisplay from '$lib/components/MoneyDisplay.svelte';
 	import Plot from '$lib/components/Plot.svelte';
 	import {
@@ -190,6 +192,21 @@
 		}, POP_MS);
 	}
 
+	// New Almanac entries get a toast, one at a time
+	const TOAST_MS = 3500;
+	let finds: { key: number; crop: CropId; mutation: MutationId }[] = [];
+	let nextFindKey = 0;
+
+	function announce(crop: CropId, mutation: MutationId) {
+		finds = [...finds, { key: nextFindKey++, crop, mutation }];
+		if (finds.length === 1) setTimeout(nextFind, TOAST_MS);
+	}
+
+	function nextFind() {
+		finds = finds.slice(1);
+		if (finds.length > 0) setTimeout(nextFind, TOAST_MS);
+	}
+
 	// Income/s averaged over the last 10s of run earnings
 	let samples: { t: number; earned: number }[] = [];
 	let incomePerSec = 0;
@@ -214,6 +231,9 @@
 		requestAnimationFrame(() => (fieldReady = true));
 		// Subscribed after load so offline catch-up doesn't spawn pops
 		const stopPops = gameStore.onHarvest(addPop);
+		const stopFinds = gameStore.onHarvest((e) => {
+			if (e.discovery && e.mutation) announce(e.crop, e.mutation);
+		});
 
 		const tickInterval = setInterval(() => gameStore.tick(), BALANCE.tickMs);
 		const incomeInterval = setInterval(sampleIncome, 1000);
@@ -226,6 +246,7 @@
 
 		return () => {
 			stopPops();
+			stopFinds();
 			clearInterval(tickInterval);
 			clearInterval(incomeInterval);
 			clearInterval(saveInterval);
@@ -515,6 +536,36 @@
 	on:pointercancel={endSweep}
 />
 
+<!-- Almanac discovery toast -->
+<div class="pointer-events-none fixed inset-x-0 top-16 z-30 flex justify-center px-4" role="status">
+	{#each finds.slice(0, 1) as find (find.key)}
+		<div
+			class="border-gold-400 bg-parchment-50 flex items-center gap-3 rounded-xl border-2 py-2 pr-4 pl-2 shadow-lg"
+			in:fly={{ y: -24, duration: reducedMotion() ? 0 : 300 }}
+			out:fade={{ duration: 200 }}
+		>
+			<span class="motion-safe:animate-pop block size-12 shrink-0">
+				<CropArt crop={find.crop} stage="mature" mutation={find.mutation} />
+			</span>
+			<span class="flex flex-col leading-tight">
+				<span class="text-wood-600 flex items-center gap-1 text-xs font-semibold">
+					<Art id="almanac" size="1.2em" /> New in the Almanac!
+				</span>
+				<span
+					class="font-display text-base font-semibold"
+					style:color={MUTATIONS[find.mutation].tint}
+				>
+					{MUTATIONS[find.mutation].name}
+					{CROPS[find.crop].name}
+				</span>
+				<span class="text-leaf-600 text-xs font-semibold">
+					+{BALANCE.discoveryBonus * 100}% value forever
+				</span>
+			</span>
+		</div>
+	{/each}
+</div>
+
 {#if sunrise}
 	<div
 		class="from-gold-100 to-gold-300 fixed inset-0 z-[35] grid place-items-center bg-linear-to-b"
@@ -702,6 +753,10 @@
 					</button>
 				</Panel>
 			{/if}
+
+			<Panel title="Almanac" icon="almanac" class={panelVisibility('stats', sheetTab)}>
+				<Almanac discoveries={game.discoveries} />
+			</Panel>
 
 			<Panel title="Stats" icon="ledger" class="{panelVisibility('stats', sheetTab)} text-sm">
 				<dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 tabular-nums">

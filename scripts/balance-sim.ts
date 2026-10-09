@@ -128,6 +128,7 @@ for (let t = 0; t <= marks[marks.length - 1]; t += STEP) {
 				`Sp${u.sprinkler} QS${u.qualitySeeds} Fe${u.fertilizer} Fld${u.expandField}`,
 				`LC${u.luckyClover} PR${u.prizeRibbons} RS${u.rainbowSeeds}`,
 				`🌟${U.prestigeGain(s.runEarned)}`,
+				`📖${s.discoveries.length}`,
 				`mut ${Math.round((mutatedEarned / Math.max(1, s.runEarned - lastEarned)) * 100)}%`
 			].join('  ')
 		);

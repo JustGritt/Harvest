@@ -29,6 +29,7 @@ src/
 │   └── components/
 │       ├── BuyButton.svelte        Purchase row for upgrades and crop unlocks (affordability fill, MAX)
 │       ├── Dialog.svelte           Modal on native <dialog> (confirmations, welcome back)
+│       ├── Almanac.svelte          Crop × mutation collection table (found entries and silhouettes)
 │       ├── MoneyDisplay.svelte     Money (counts up) + income/s, bumps when harvest coins land
 │       ├── Panel.svelte            Parchment card with a wood header strip
 │       └── Plot.svelte             One field plot: soil tile, growth-stage sprite, ready glow, harvest pops

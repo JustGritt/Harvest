@@ -11,6 +11,8 @@ import {
 	isMaxed,
 	isUpgradeVisible,
 	planterInterval,
+	ALL_DISCOVERIES,
+	discoveryKey,
 	prestigeGain,
 	resizeField,
 	rollMutation,
@@ -25,7 +27,10 @@ const harvestListeners = new Set<(event: HarvestEvent) => void>();
 
 /** Fresh run. `carry` holds the fields that survive a prestige reset. */
 function createInitialState(
-	carry?: Pick<GameState, 'legacySeeds' | 'prestigeCount' | 'lifetimeEarned' | 'totalHarvested'>
+	carry?: Pick<
+		GameState,
+		'legacySeeds' | 'prestigeCount' | 'lifetimeEarned' | 'totalHarvested' | 'discoveries'
+	>
 ): GameState {
 	const now = Date.now();
 	const { rows, cols } = fieldSize(0);
@@ -56,7 +61,8 @@ function createInitialState(
 		legacySeeds: carry?.legacySeeds ?? 0,
 		prestigeCount: carry?.prestigeCount ?? 0,
 		lifetimeEarned: carry?.lifetimeEarned ?? 0,
-		totalHarvested: carry?.totalHarvested ?? 0
+		totalHarvested: carry?.totalHarvested ?? 0,
+		discoveries: carry?.discoveries ?? []
 	};
 }
 
@@ -78,7 +84,13 @@ function harvestCell(state: GameState, cell: Cell, auto: boolean) {
 	state.runEarned += value;
 	state.lifetimeEarned += value;
 	state.totalHarvested++;
-	for (const listener of harvestListeners) listener({ cellId: cell.id, value, auto, mutation });
+	// The first harvest of each crop × mutation pair goes in the Almanac
+	const key = mutation && discoveryKey(cell.crop, mutation);
+	const discovery = !!key && !state.discoveries.includes(key);
+	if (key && discovery) state.discoveries.push(key);
+	for (const listener of harvestListeners) {
+		listener({ cellId: cell.id, crop: cell.crop, value, auto, mutation, discovery });
+	}
 	cell.status = 'empty';
 	cell.crop = null;
 	cell.plantedAt = null;
@@ -159,6 +171,9 @@ function hydrate(saved: Partial<GameState>): GameState {
 		if (!cell.mutation || !(cell.mutation in MUTATIONS)) cell.mutation = null;
 	}
 	if (!state.unlockedCrops.includes(state.selectedCrop)) state.selectedCrop = 'wheat';
+	// Known entries only, once each, in the order found
+	const found = Array.isArray(state.discoveries) ? state.discoveries : [];
+	state.discoveries = [...new Set(found)].filter((d) => ALL_DISCOVERIES.includes(d));
 	return state;
 }
 
@@ -280,7 +295,8 @@ function createGameStore() {
 					legacySeeds: state.legacySeeds + gain,
 					prestigeCount: state.prestigeCount + 1,
 					lifetimeEarned: state.lifetimeEarned,
-					totalHarvested: state.totalHarvested
+					totalHarvested: state.totalHarvested,
+					discoveries: state.discoveries
 				});
 			});
 		},

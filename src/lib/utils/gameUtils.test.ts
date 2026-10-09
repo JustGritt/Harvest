@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { BALANCE } from '$lib/data/balance';
 import type { CropId, UpgradeLevels } from '$lib/types';
 import {
+	ALL_DISCOVERIES,
 	createCell,
 	cropRate,
+	discoveryKey,
+	discoveryMultiplier,
 	expectedMutationMultiplier,
 	farmerInterval,
 	fieldSize,
@@ -89,13 +92,16 @@ describe('growProgress / growStage', () => {
 
 describe('harvestValue', () => {
 	it('is the base value with no upgrades', () => {
-		expect(harvestValue('carrot', { upgrades: levels(), legacySeeds: 0 })).toBe(40);
+		expect(harvestValue('carrot', { upgrades: levels(), legacySeeds: 0, discoveries: [] })).toBe(
+			40
+		);
 	});
 
 	it('stacks quality seeds, fertilizer and legacy seeds, rounded to an integer', () => {
 		const value = harvestValue('wheat', {
 			upgrades: levels({ qualitySeeds: 1, fertilizer: 1 }),
-			legacySeeds: 3
+			legacySeeds: 3,
+			discoveries: []
 		});
 		// 10 × 1.2 × 1.1 × 1.3 = 17.16
 		expect(value).toBe(17);
@@ -104,7 +110,7 @@ describe('harvestValue', () => {
 });
 
 describe('mutations', () => {
-	const s = { upgrades: levels(), legacySeeds: 0 };
+	const s = { upgrades: levels(), legacySeeds: 0, discoveries: [] };
 	const { bountiful, giant, golden } = MUTATIONS;
 
 	it('rolls the rarest first, then commoner ones, then nothing', () => {
@@ -150,6 +156,20 @@ describe('mutations', () => {
 	});
 });
 
+describe('Almanac', () => {
+	it('has one entry per crop × mutation', () => {
+		expect(ALL_DISCOVERIES).toHaveLength(16);
+		expect(ALL_DISCOVERIES).toContain(discoveryKey('pumpkin', 'golden'));
+	});
+
+	it('adds 3% value per discovery', () => {
+		expect(discoveryMultiplier([])).toBe(1);
+		expect(discoveryMultiplier(['wheat:golden', 'carrot:giant'])).toBeCloseTo(1.06);
+		const s = { upgrades: levels(), legacySeeds: 0, discoveries: ALL_DISCOVERIES.slice(0, 10) };
+		expect(harvestValue('carrot', s)).toBe(52); // 40 × 1.3
+	});
+});
+
 describe('isUpgradeVisible', () => {
 	const at = (upgrades: Partial<UpgradeLevels>, unlockedCrops: CropId[] = ['wheat']) => ({
 		upgrades: levels(upgrades),
@@ -169,7 +189,7 @@ describe('isUpgradeVisible', () => {
 
 describe('cropRate', () => {
 	it('is harvest value per second of grow time', () => {
-		const state = { upgrades: levels(), legacySeeds: 0 };
+		const state = { upgrades: levels(), legacySeeds: 0, discoveries: [] };
 		expect(cropRate('wheat', state)).toBeCloseTo(10 / 3);
 		expect(cropRate('carrot', state)).toBeCloseTo(4);
 	});

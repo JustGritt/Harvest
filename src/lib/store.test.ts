@@ -111,8 +111,8 @@ describe('onHarvest', () => {
 		state().farmerProgress = 1;
 		gameStore.tick(T0 + 3000);
 		expect(events).toEqual([
-			{ cellId: '0-0', value: 10, auto: false, mutation: null },
-			{ cellId: '0-1', value: 10, auto: true, mutation: null }
+			{ cellId: '0-0', crop: 'wheat', value: 10, auto: false, mutation: null, discovery: false },
+			{ cellId: '0-1', crop: 'wheat', value: 10, auto: true, mutation: null, discovery: false }
 		]);
 
 		stop();
@@ -151,6 +151,40 @@ describe('mutations', () => {
 		state().upgrades.rainbowSeeds = 1;
 		gameStore.plantCrop(0, 0);
 		expect(state().field[0][0].mutation).toBe('rainbow');
+	});
+
+	it('records each crop × mutation pair in the Almanac on its first harvest', () => {
+		vi.mocked(Math.random).mockReturnValue(0);
+		const events: HarvestEvent[] = [];
+		const stop = gameStore.onHarvest((e) => events.push(e));
+		gameStore.plantCrop(0, 0);
+		gameStore.plantCrop(0, 1);
+		setNow(T0 + CROPS.wheat.growTime);
+		gameStore.harvestCrop(0, 0);
+		gameStore.harvestCrop(0, 1);
+		stop();
+		expect(events.map((e) => e.discovery)).toEqual([true, false]);
+		expect(state().discoveries).toEqual(['wheat:golden']);
+		// The first harvest is paid before its own discovery bonus applies
+		expect(events[0].value).toBe(100);
+		expect(events[1].value).toBe(103);
+	});
+
+	it('keeps the Almanac when the farm is sold, but not on a hard reset', () => {
+		state().discoveries.push('carrot:giant');
+		state().runEarned = 1e9;
+		gameStore.prestige();
+		expect(state().discoveries).toEqual(['carrot:giant']);
+		gameStore.hardReset();
+		expect(state().discoveries).toEqual([]);
+	});
+
+	it('loads only known Almanac entries, once each', () => {
+		const saved = JSON.parse(JSON.stringify(state()));
+		saved.discoveries = ['carrot:giant', 'wheat:cursed', 'carrot:giant', 'wheat:golden'];
+		storage[SAVE_KEY] = JSON.stringify(saved);
+		gameStore.load();
+		expect(state().discoveries).toEqual(['carrot:giant', 'wheat:golden']);
 	});
 
 	it('loads old cells without a mutation, and drops unknown ones', () => {

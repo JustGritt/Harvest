@@ -20,6 +20,9 @@ export const BALANCE = {
 	/** Additive bonus to each mutation's extra value per Prize Ribbons level. */
 	prizeRibbonBonus: 0.25,
 
+	/** Permanent value bonus per Almanac discovery. */
+	discoveryBonus: 0.03,
+
 	/** Income bonus per legacy seed. */
 	legacySeedBonus: 0.1,
 	/** Legacy seeds earned on prestige = floor(sqrt(runEarned / prestigeDivisor)). */

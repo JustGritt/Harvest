@@ -49,6 +49,7 @@ export const ART_IDS = [
 	'warning',
 	'crate',
 	'pointer',
+	'almanac',
 	// fx particles
 	'dirt',
 	'sparkle',

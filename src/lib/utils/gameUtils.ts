@@ -1,8 +1,16 @@
 import { BALANCE } from '$lib/data/balance';
-import { CROPS } from '$lib/data/crops';
+import { CROPS, CROP_ORDER } from '$lib/data/crops';
 import { MUTATIONS, MUTATION_ORDER } from '$lib/data/mutations';
 import { UPGRADES } from '$lib/data/upgrades';
-import type { Cell, CropId, GameState, MutationId, UpgradeId, UpgradeLevels } from '$lib/types';
+import type {
+	Cell,
+	CropId,
+	Discovery,
+	GameState,
+	MutationId,
+	UpgradeId,
+	UpgradeLevels
+} from '$lib/types';
 
 // ---------- Field ----------
 
@@ -70,12 +78,16 @@ export function growTime(crop: CropId, upgrades: UpgradeLevels): number {
 	return CROPS[crop].growTime * growthMultiplier(upgrades);
 }
 
-export function valueMultiplier(state: Pick<GameState, 'upgrades' | 'legacySeeds'>): number {
+/** The parts of the state that set a crop's harvest value. */
+export type ValueState = Pick<GameState, 'upgrades' | 'legacySeeds' | 'discoveries'>;
+
+export function valueMultiplier(state: ValueState): number {
 	const { qualitySeeds, fertilizer } = state.upgrades;
 	return (
 		(1 + qualitySeeds * BALANCE.qualitySeedsBonus) *
 		BALANCE.fertilizerFactor ** fertilizer *
-		(1 + state.legacySeeds * BALANCE.legacySeedBonus)
+		(1 + state.legacySeeds * BALANCE.legacySeedBonus) *
+		discoveryMultiplier(state.discoveries)
 	);
 }
 
@@ -135,19 +147,31 @@ export function expectedMutationMultiplier(upgrades: UpgradeLevels): number {
 	);
 }
 
-export function harvestValue(
-	crop: CropId,
-	state: Pick<GameState, 'upgrades' | 'legacySeeds'>,
-	mutation: MutationId | null = null
-) {
+export function harvestValue(crop: CropId, state: ValueState, mutation: MutationId | null = null) {
 	return Math.round(
 		CROPS[crop].value * valueMultiplier(state) * mutationMultiplier(mutation, state.upgrades)
 	);
 }
 
 /** Money per second one plot earns with this crop, ignoring time spent empty. */
-export function cropRate(crop: CropId, state: Pick<GameState, 'upgrades' | 'legacySeeds'>) {
+export function cropRate(crop: CropId, state: ValueState) {
 	return harvestValue(crop, state) / (growTime(crop, state.upgrades) / 1000);
+}
+
+// ---------- Almanac ----------
+
+export function discoveryKey(crop: CropId, mutation: MutationId): Discovery {
+	return `${crop}:${mutation}`;
+}
+
+/** Every Almanac entry, crop by crop. */
+export const ALL_DISCOVERIES: Discovery[] = CROP_ORDER.flatMap((crop) =>
+	MUTATION_ORDER.map((mutation) => discoveryKey(crop, mutation))
+);
+
+/** Permanent value multiplier from the Almanac. */
+export function discoveryMultiplier(discoveries: Discovery[]): number {
+	return 1 + discoveries.length * BALANCE.discoveryBonus;
 }
 
 export function farmerInterval(upgrades: UpgradeLevels): number {

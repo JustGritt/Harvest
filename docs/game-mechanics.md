@@ -37,7 +37,8 @@ There is one selected seed for the whole farm. Manual planting and seed planters
 
 ```
 growTime     = crop.growTime × 0.92^sprinkler
-harvestValue = round(crop.value × (1 + 0.2 × qualitySeeds) × 1.1^fertilizer × (1 + 0.1 × legacySeeds) × mutation.multiplier)
+harvestValue = round(crop.value × (1 + 0.2 × qualitySeeds) × 1.1^fertilizer × (1 + 0.1 × legacySeeds)
+                     × (1 + 0.03 × almanacEntries) × mutationMultiplier)
 workerInterval (ms per action, per worker) = 3000 × 0.88^trainingLevel
 upgradeCost  = floor(baseCost × costGrowth^level)
 legacySeedsFromSale = floor(sqrt(runEarned / 1,000,000))
@@ -109,12 +110,18 @@ Farmers harvest instantly, so plots never sit in a "harvesting" state.
 - **Offline progress.** On load, the time since `lastTick` is simulated in the same 1 s steps, up to **8 hours**. If you were away for at least a minute and earned something, a banner shows the duration and earnings. Because offline steps are 1 s long, very fast crops (well under 1 s) earn a little less offline than they would live.
 - **Export / import.** The Stats panel can export the save as a base64 string (copied to the clipboard) and import one, after a confirmation dialog. Imports are validated the same way as loads, and an invalid string leaves the game untouched. An imported save earns no offline progress; its clock restarts at the moment of import.
 
+## Almanac
+
+The first harvest of each crop × mutation pair (4 × 4 = **16 entries**) is recorded in the Almanac (`GameState.discoveries`), whether the player or a farmer harvests it. Each entry adds **+3%** to all harvest value for good: the Almanac survives selling the farm, and only **Reset save** clears it. The harvest that makes a discovery is paid before its own bonus applies.
+
+A toast announces each new entry. The Almanac panel (with Stats, in the Stats tab on mobile) shows found entries in full and the rest as silhouettes, plus the total bonus. Rainbow entries need Rainbow Seeds, so a full Almanac takes several runs.
+
 ## Prestige (Legacy)
 
 - The **🌟 Legacy** panel appears once you can earn your first seed, which takes 1M money earned in the run.
 - **Sell farm** resets money, upgrades, unlocked crops and the field. In return you get `floor(sqrt(runEarned / 1M))` legacy seeds.
 - Each legacy seed adds **+10% to all harvest value**, permanently.
-- These survive a sale: legacy seeds, number of farms sold, lifetime earnings and total crops harvested.
+- These survive a sale: legacy seeds, number of farms sold, lifetime earnings, total crops harvested and the Almanac.
 - The panel shows how much this run needs to earn for the next seed: `(gain + 1)² × 1M`.
 
 **Reset save** in the Stats panel deletes everything, legacy seeds included, after asking for confirmation.
@@ -126,17 +133,17 @@ Farmers harvest instantly, so plots never sit in a "harvesting" state.
 - `mixed` clicks for 2 minutes, then idles.
 - `active` clicks the whole time and never buys workers.
 
-`Math.random` is seeded in the sim, so mutation rolls and results are identical on every run. The `mut` column is the share of earnings in that interval that came from mutated crops.
+`Math.random` is seeded in the sim, so mutation rolls and results are identical on every run. The `mut` column is the share of earnings in that interval that came from mutated crops, and 📖 counts Almanac entries.
 
 Results for the current numbers:
 
 | Time | Mixed (idle after 2m) | Active (clicks only) | Mixed crop | First 🌟         |
 | ---: | --------------------: | -------------------: | ---------- | ---------------- |
-|   2m |                  68/s |                108/s | wheat      |                  |
-|  10m |                2.5K/s |               4.3K/s | pumpkin    |                  |
-|  20m |               25.2K/s |              30.3K/s | sunflower  | mixed: ~11m      |
-|  60m |                155K/s |              99.4K/s | sunflower  | 17 seeds by 60m  |
-| 120m |                321K/s |               187K/s | sunflower  | 35 seeds by 120m |
+|   2m |                  79/s |                123/s | wheat      |                  |
+|  10m |                5.0K/s |               5.8K/s | pumpkin    | mixed: ~9m       |
+|  20m |               62.0K/s |              47.7K/s | sunflower  |                  |
+|  60m |                304K/s |               157K/s | sunflower  | 23 seeds by 60m  |
+| 120m |                553K/s |               289K/s | sunflower  | 47 seeds by 120m |
 
 An idle player who stops clicking at 2 minutes keeps pace with a perfect nonstop clicker, and pulls ahead after about 20 minutes. The active bot clicks 4 times a second without ever stopping, which no real player does, so a real player who clicks only some of the time falls well below the idle line.
 
