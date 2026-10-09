@@ -4,22 +4,23 @@
 
 ## How to Play
 
-1. **Click an empty plot** to plant your selected seed, and **click a ready plot** (it glows gold) to harvest it.
+1. **Click an empty plot** to plant your selected seed, and **click a ready plot** (it glows gold) to harvest it. Drag across plots to do several at once.
 2. Spend your 💰 on **workers**: seed planters plant for you and farmers harvest for you. After a few minutes the farm runs itself.
 3. **Unlock slower crops** (🌾 → 🥕 → 🎃 → 🌻). They earn more per plot and far more per harvest.
 4. Buy **upgrades** to grow crops faster, raise their value, and expand the field up to 8×8.
-5. Once you've earned 1M in a run, **sell the farm** for 🌟 legacy seeds. Each one adds +10% income permanently, then you start over.
+5. Watch for **mutations**: some crops grow Bountiful (×2), Giant (×4), Golden (×10) or, later, Rainbow (×50). Each new kind you harvest goes in the **Almanac** for a permanent +3% value.
+6. Once you've earned 30M in a run, **sell the farm** for 🌟 legacy seeds. Each one adds +25% income permanently, then you start over.
 
 The game saves itself in your browser and keeps farming for up to 8 hours while you're away. You can move a save to another browser with **Export / import** in the Stats panel.
 
 ## Crops
 
-| Crop         | Grow time | Value |  Unlock |
-| ------------ | --------: | ----: | ------: |
-| 🌾 Wheat     |        3s |    10 |    free |
-| 🥕 Carrot    |       10s |    40 |     500 |
-| 🎃 Pumpkin   |       30s |   150 |   5,000 |
-| 🌻 Sunflower |       60s |   360 | 250,000 |
+| Crop         | Grow time | Value |    Unlock |
+| ------------ | --------: | ----: | --------: |
+| 🌾 Wheat     |        3s |    10 |      free |
+| 🥕 Carrot    |       10s |    40 |       500 |
+| 🎃 Pumpkin   |       30s |   150 |    50,000 |
+| 🌻 Sunflower |       60s |   360 | 1,400,000 |
 
 ## Upgrades
 
@@ -30,6 +31,7 @@ The game saves itself in your browser and keeps farming for up to 8 hours while 
 - **✨ Quality Seeds**: +20% harvest value per level.
 - **🧪 Fertilizer**: ×1.1 harvest value per level (compounding).
 - **🚜 Expand Field**: adds a column or row of plots, up to 8×8.
+- **🍀 Lucky Clover / 🎀 Prize Ribbons / 🌈 Rainbow Seeds**: more mutations, bigger mutation payouts, and the Rainbow mutation.
 
 Exact formulas, costs and balance notes are in [docs/game-mechanics.md](docs/game-mechanics.md).
 

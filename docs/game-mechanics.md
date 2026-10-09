@@ -26,8 +26,8 @@ Clicking an empty plot plants the **selected seed**. Clicking a ready plot harve
 | ------------ | --------: | ---------: | ------------------: | ----------: |
 | 🌾 Wheat     |        3s |         10 |                3.33 |        free |
 | 🥕 Carrot    |       10s |         40 |                4.00 |         500 |
-| 🎃 Pumpkin   |       30s |        150 |                5.00 |       5,000 |
-| 🌻 Sunflower |       60s |        360 |                6.00 |     250,000 |
+| 🎃 Pumpkin   |       30s |        150 |                5.00 |      50,000 |
+| 🌻 Sunflower |       60s |        360 |                6.00 |   1,400,000 |
 
 Crops form a ladder. Each slower crop earns a little more per plot-second and much more per harvest. That means it needs far fewer actions (clicks, or worker actions) to produce the same income, which matters most when workers are scarce. The trade-off is waiting: slow crops keep plots occupied for longer.
 
@@ -37,11 +37,11 @@ There is one selected seed for the whole farm. Manual planting and seed planters
 
 ```
 growTime     = crop.growTime × 0.92^sprinkler
-harvestValue = round(crop.value × (1 + 0.2 × qualitySeeds) × 1.1^fertilizer × (1 + 0.1 × legacySeeds)
+harvestValue = round(crop.value × (1 + 0.2 × qualitySeeds) × 1.1^fertilizer × (1 + 0.25 × legacySeeds)
                      × (1 + 0.03 × almanacEntries) × mutationMultiplier)
 workerInterval (ms per action, per worker) = 3000 × 0.88^trainingLevel
 upgradeCost  = floor(baseCost × costGrowth^level)
-legacySeedsFromSale = floor(sqrt(runEarned / 1,000,000))
+legacySeedsFromSale = floor(sqrt(runEarned / 30,000,000))
 ```
 
 Money is always a whole number, because each harvest value is rounded.
@@ -72,15 +72,15 @@ mutationMultiplier = 1 + (multiplier − 1) × (1 + 0.25 × prizeRibbons)
 | ------------------ | --------: | -----: | --: | ------------------------------------------------------ |
 | 🧑‍🌾 Farmer          |       100 |  ×1.25 |   — | +1 worker that harvests ready plots                    |
 | 🌱 Seed Planter    |        75 |  ×1.25 |   — | +1 worker that plants the selected seed in empty plots |
-| 📘 Farmer Training |       200 |   ×1.7 |  15 | Farmer interval ×0.88 (3.0s → 0.44s at max)            |
-| ⚙️ Planter Gears   |       150 |   ×1.7 |  15 | Seed planter interval ×0.88                            |
-| 💧 Sprinkler       |       150 |   ×1.7 |  15 | Grow time ×0.92 (−71% at max)                          |
-| ✨ Quality Seeds   |       100 |   ×1.4 |   — | +20% harvest value (additive)                          |
-| 🧪 Fertilizer      |     1,000 |   ×1.6 |   — | ×1.1 harvest value (compounding)                       |
-| 🍀 Lucky Clover    |     8,000 |     ×2 |  10 | Mutation chance ×(1 + 0.2 × level) (×3 at max)         |
-| 🎀 Prize Ribbons   |   150,000 |   ×2.2 |  10 | Each mutation's extra value ×(1 + 0.25 × level)        |
+| 📘 Farmer Training |       200 |  ×1.95 |  15 | Farmer interval ×0.88 (3.0s → 0.44s at max)            |
+| ⚙️ Planter Gears   |       150 |  ×1.95 |  15 | Seed planter interval ×0.88                            |
+| 💧 Sprinkler       |       150 |  ×1.85 |  15 | Grow time ×0.92 (−71% at max)                          |
+| ✨ Quality Seeds   |       100 |   ×1.5 |   — | +20% harvest value (additive)                          |
+| 🧪 Fertilizer      |     1,000 |  ×1.75 |   — | ×1.1 harvest value (compounding)                       |
+| 🍀 Lucky Clover    |    15,000 |   ×2.1 |  10 | Mutation chance ×(1 + 0.2 × level) (×3 at max)         |
+| 🎀 Prize Ribbons   |   400,000 |     ×2 |  10 | Each mutation's extra value ×(1 + 0.25 × level)        |
 | 🌈 Rainbow Seeds   |       20M |      — |   1 | Unlocks the Rainbow mutation                           |
-| 🚜 Expand Field    |       250 |   ×2.3 |  10 | +1 column or row                                       |
+| 🚜 Expand Field    |       250 |   ×2.9 |  10 | +1 column or row                                       |
 
 - Farmer Training appears once you own a farmer; Planter Gears appears once you own a seed planter.
 - The Mutations section opens with pumpkin: Lucky Clover appears once pumpkin is unlocked, Prize Ribbons once you own a Lucky Clover, and Rainbow Seeds once sunflower is unlocked (`requires` / `requiresCrop`, checked by `isUpgradeVisible`).
@@ -88,7 +88,7 @@ mutationMultiplier = 1 + (multiplier − 1) × (1 + 0.25 × prizeRibbons)
 - A purchase button is disabled while you can't afford it.
 - Every upgrade shows its effect as "current → next".
 
-Workers and the multipliers grow at different rates on purpose. Workers get more expensive slowly (×1.25) but stop helping once the field is saturated. The capped upgrades get expensive quickly (×1.7 and ×2.3) and are spread out over the first 20–30 minutes. Quality Seeds and Fertilizer never cap, so there is always something to buy late in a run.
+Workers and the multipliers grow at different rates on purpose. Workers get more expensive slowly (×1.25) but stop helping once they can keep up with the field: extra ones just sit idle, so money is better spent on growth and value. The capped upgrades get expensive quickly (×1.85 to ×2.9) and max out between about 15 and 35 minutes. Quality Seeds, Fertilizer and the mutation upgrades keep a run growing after that.
 
 ## Automation
 
@@ -118,37 +118,54 @@ A toast announces each new entry. The Almanac panel (with Stats, in the Stats ta
 
 ## Prestige (Legacy)
 
-- The **🌟 Legacy** panel appears once you can earn your first seed, which takes 1M money earned in the run.
-- **Sell farm** resets money, upgrades, unlocked crops and the field. In return you get `floor(sqrt(runEarned / 1M))` legacy seeds.
-- Each legacy seed adds **+10% to all harvest value**, permanently.
+- The **🌟 Legacy** panel appears once you can earn your first seed, which takes 30M money earned in the run (about 24 minutes).
+- **Sell farm** resets money, upgrades, unlocked crops and the field. In return you get `floor(sqrt(runEarned / 30M))` legacy seeds.
+- Each legacy seed adds **+25% to all harvest value**, permanently. Selling at 45–60 minutes gives about 3 seeds (+75%).
 - These survive a sale: legacy seeds, number of farms sold, lifetime earnings, total crops harvested and the Almanac.
-- The panel shows how much this run needs to earn for the next seed: `(gain + 1)² × 1M`.
+- The panel shows how much this run needs to earn for the next seed: `(gain + 1)² × 30M`.
 
 **Reset save** in the Stats panel deletes everything, legacy seeds included, after asking for confirmation.
 
 ## Balance simulation
 
-`yarn sim [mixed|active]` runs `scripts/balance-sim.ts`. It drives the real store with a fake clock and a simulated player who clicks 4 times per second and greedily buys the cheapest option.
+`yarn sim [mixed|active] [--timeline]` runs `scripts/balance-sim.ts`. It drives the real store with a fake clock and a simulated player who clicks 4 times per second and greedily buys the cheapest option.
 
-- `mixed` clicks for 2 minutes, then idles.
+- `mixed` clicks for 2 minutes, then idles. It stops buying workers (and their speed upgrades) once they can do 1.25× what the field needs, as a sensible player would.
 - `active` clicks the whole time and never buys workers.
+
+The sim also tracks **firsts**: every crop unlock, new shop item, first purchase, maxed upgrade, first crop of each mutation, Almanac entry and legacy-seed milestone. It prints how many came in each window and the longest wait without one; `--timeline` lists them all.
 
 `Math.random` is seeded in the sim, so mutation rolls and results are identical on every run. The `mut` column is the share of earnings in that interval that came from mutated crops, and 📖 counts Almanac entries.
 
 Results for the current numbers:
 
-| Time | Mixed (idle after 2m) | Active (clicks only) | Mixed crop | First 🌟         |
-| ---: | --------------------: | -------------------: | ---------- | ---------------- |
-|   2m |                  79/s |                123/s | wheat      |                  |
-|  10m |                5.0K/s |               5.8K/s | pumpkin    | mixed: ~9m       |
-|  20m |               62.0K/s |              47.7K/s | sunflower  |                  |
-|  60m |                304K/s |               157K/s | sunflower  | 23 seeds by 60m  |
-| 120m |                553K/s |               289K/s | sunflower  | 47 seeds by 120m |
+| Time | Mixed (idle after 2m) | Active (clicks only) | Mixed crop | First 🌟        |
+| ---: | --------------------: | -------------------: | ---------- | --------------- |
+|   2m |                  72/s |                131/s | wheat      |                 |
+|  10m |                4.9K/s |                765/s | pumpkin    |                 |
+|  20m |               29.0K/s |               6.0K/s | sunflower  | mixed: ~24m     |
+|  60m |                210K/s |              42.9K/s | sunflower  | 3 seeds by 60m  |
+| 120m |                369K/s |               113K/s | sunflower  | 7 seeds by 120m |
 
-An idle player who stops clicking at 2 minutes keeps pace with a perfect nonstop clicker, and pulls ahead after about 20 minutes. The active bot clicks 4 times a second without ever stopping, which no real player does, so a real player who clicks only some of the time falls well below the idle line.
+Clicking wins the first couple of minutes, then automation takes over: by 10 minutes the idle player earns about 6× a perfect nonstop clicker, which no real player is anyway.
+
+### Progress curve
+
+Targets for a run (mixed sim), and where the current numbers land:
+
+| Target                                            | Now                                                  |
+| ------------------------------------------------- | ---------------------------------------------------- |
+| Crops unlock every few minutes, then about 20m    | carrot 2m, pumpkin 7m, sunflower 19m                 |
+| Something new at least every ~5 minutes for 30m   | 36 firsts in 0–30m, longest wait 5m 13s              |
+| Capped upgrades max out spread over the first 35m | Sprinkler 17m, Expand Field 25m, Lucky Clover 34m    |
+| Rainbow Seeds is a mid-run goal                   | bought at 44m                                        |
+| First legacy seed around 25m                      | 24m                                                  |
+| Mutations become the late-game engine             | 25% of income at 10m, 39% at 20m, about 70% from 60m |
+
+After about 45 minutes new things are rare (Prize Ribbons maxes at 1h 46m), which is where selling the farm is meant to take over. More late content is tracked in #9.
 
 ## Known gaps
 
-- After about 30 minutes, every capped upgrade is maxed. From then on, a run only grows through Quality Seeds, Fertilizer and more workers, until you sell the farm.
+- After about 45 minutes a run only grows through Quality Seeds, Fertilizer and Prize Ribbons levels, until you sell the farm. Seed planters and farmers never need their speed upgrades maxed, so a careful player leaves those alone.
 - Legacy seeds have a single use (an income bonus). There's no prestige shop yet.
 - There are no achievements, sound, or offline notifications yet (see the README roadmap).

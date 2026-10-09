@@ -40,7 +40,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 		description: 'Farmers work 12% faster.',
 		category: 'workers',
 		baseCost: 200,
-		costGrowth: 1.7,
+		costGrowth: 1.95,
 		maxLevel: 15,
 		requires: 'farmer'
 	},
@@ -50,7 +50,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 		description: 'Seed planters work 12% faster.',
 		category: 'workers',
 		baseCost: 150,
-		costGrowth: 1.7,
+		costGrowth: 1.95,
 		maxLevel: 15,
 		requires: 'seedPlanter'
 	},
@@ -60,7 +60,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 		description: 'Crops grow 8% faster (compounding).',
 		category: 'growth',
 		baseCost: 150,
-		costGrowth: 1.7,
+		costGrowth: 1.85,
 		maxLevel: 15
 	},
 	qualitySeeds: {
@@ -69,7 +69,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 		description: '+20% harvest value.',
 		category: 'growth',
 		baseCost: 100,
-		costGrowth: 1.4
+		costGrowth: 1.5
 	},
 	fertilizer: {
 		id: 'fertilizer',
@@ -77,7 +77,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 		description: '×1.1 harvest value (compounding).',
 		category: 'growth',
 		baseCost: 1000,
-		costGrowth: 1.6
+		costGrowth: 1.75
 	},
 	expandField: {
 		id: 'expandField',
@@ -85,7 +85,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 		description: 'Adds a column or row of plots.',
 		category: 'field',
 		baseCost: 250,
-		costGrowth: 2.3,
+		costGrowth: 2.9,
 		maxLevel: 10
 	},
 	luckyClover: {
@@ -93,8 +93,8 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 		name: 'Lucky Clover',
 		description: 'Mutations are 20% more likely.',
 		category: 'mutations',
-		baseCost: 8_000,
-		costGrowth: 2,
+		baseCost: 15_000,
+		costGrowth: 2.1,
 		maxLevel: 10,
 		requiresCrop: 'pumpkin'
 	},
@@ -103,8 +103,8 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 		name: 'Prize Ribbons',
 		description: 'Mutation bonuses are 25% bigger.',
 		category: 'mutations',
-		baseCost: 150_000,
-		costGrowth: 2.2,
+		baseCost: 400_000,
+		costGrowth: 2,
 		maxLevel: 10,
 		requires: 'luckyClover'
 	},

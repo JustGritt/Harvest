@@ -103,8 +103,8 @@ describe('harvestValue', () => {
 			legacySeeds: 3,
 			discoveries: []
 		});
-		// 10 × 1.2 × 1.1 × 1.3 = 17.16
-		expect(value).toBe(17);
+		// 10 × 1.2 × 1.1 × 1.75 = 23.1
+		expect(value).toBe(23);
 		expect(Number.isInteger(value)).toBe(true);
 	});
 });

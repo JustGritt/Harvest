@@ -24,9 +24,9 @@ export const BALANCE = {
 	discoveryBonus: 0.03,
 
 	/** Income bonus per legacy seed. */
-	legacySeedBonus: 0.1,
+	legacySeedBonus: 0.25,
 	/** Legacy seeds earned on prestige = floor(sqrt(runEarned / prestigeDivisor)). */
-	prestigeDivisor: 1_000_000,
+	prestigeDivisor: 30_000_000,
 
 	tickMs: 100,
 	/** Largest simulation sub-step, so throttled tabs and offline catch-up stay accurate. */

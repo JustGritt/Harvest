@@ -36,7 +36,7 @@ export const CROPS: Record<CropId, CropDef> = {
 		name: 'Pumpkin',
 		growTime: 30_000,
 		value: 150,
-		unlockCost: 5_000,
+		unlockCost: 50_000,
 		tint: '#d4531c'
 	},
 	sunflower: {
@@ -44,7 +44,7 @@ export const CROPS: Record<CropId, CropDef> = {
 		name: 'Sunflower',
 		growTime: 60_000,
 		value: 360,
-		unlockCost: 250_000,
+		unlockCost: 1_400_000,
 		tint: '#ffcc1a'
 	}
 };

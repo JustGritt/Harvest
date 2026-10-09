@@ -1,6 +1,7 @@
 // Headless balance simulation that drives the real game store with a fake clock.
-// Run with `yarn sim [mixed|active]`:
-//   mixed  - clicks for the first 2 minutes, then idles; buys anything (cheapest first)
+// Run with `yarn sim [mixed|active] [--timeline]`:
+//   mixed  - clicks for the first 2 minutes, then idles; buys anything (cheapest first), but stops
+//            adding workers once they keep up with the field (extra ones would sit idle)
 //   active - clicks the whole time and never buys workers
 // The simulated player clicks 4 times per second, harvesting before planting.
 // Math.random is seeded, so mutation rolls (and every result) are the same on each run.
@@ -23,7 +24,8 @@ Math.random = () => {
 const { get } = await import('svelte/store');
 const { gameStore } = await import('$lib/store');
 const { CROPS, CROP_ORDER } = await import('$lib/data/crops');
-const { UPGRADE_ORDER } = await import('$lib/data/upgrades');
+const { UPGRADES, UPGRADE_ORDER } = await import('$lib/data/upgrades');
+const { MUTATIONS } = await import('$lib/data/mutations');
 const U = await import('$lib/utils/gameUtils');
 
 const mode = process.argv[2] === 'active' ? 'active' : 'mixed';
@@ -70,13 +72,32 @@ function clickOnce(s: GameState) {
 	}
 }
 
+/** Actions per second the field can use: every plot replanted as soon as it's ripe. */
+function fieldThroughput(s: GameState): number {
+	const plots = s.field.length * s.field[0].length;
+	return (plots * 1000) / U.growTime(s.selectedCrop, s.upgrades);
+}
+
+/** Worker upgrades that would only add idle capacity right now. */
+function saturated(s: GameState): UpgradeId[] {
+	const need = fieldThroughput(s) * 1.25;
+	const farmers = (s.upgrades.farmer * 1000) / U.farmerInterval(s.upgrades);
+	const planters = (s.upgrades.seedPlanter * 1000) / U.planterInterval(s.upgrades);
+	return [
+		...(farmers >= need ? (['farmer', 'farmerTraining'] as const) : []),
+		...(planters >= need ? (['seedPlanter', 'planterGears'] as const) : [])
+	];
+}
+
 function buyCheapest() {
 	for (let i = 0; i < 20; i++) {
 		const s = get(gameStore);
+		const idle = saturated(s);
 		const options: { cost: number; buy: () => void }[] = UPGRADE_ORDER.filter(
 			(id) =>
 				U.isUpgradeVisible(id, s) &&
 				!U.isMaxed(id, s.upgrades[id]) &&
+				!idle.includes(id) &&
 				!(mode === 'active' && WORKER_UPGRADES.includes(id))
 		).map((id) => ({
 			cost: U.upgradeCost(id, s.upgrades[id]),
@@ -95,8 +116,39 @@ function buyCheapest() {
 // Share of earnings that came from mutated crops, per reporting interval
 let mutatedEarned = 0;
 gameStore.onHarvest((e) => {
-	if (e.mutation) mutatedEarned += e.value;
+	if (e.mutation) {
+		mutatedEarned += e.value;
+		note(fakeNow - start, `mutation:${e.mutation}`, `first ${MUTATIONS[e.mutation].name} crop`);
+	}
+	if (e.discovery)
+		note(fakeNow - start, `almanac:${e.crop}:${e.mutation}`, `Almanac: ${e.mutation} ${e.crop}`);
 });
+
+// Timeline of firsts: everything a player would notice as new (unlocks, new shop items, first
+// purchases, maxed upgrades, mutations, Almanac entries, legacy seeds)
+const timeline: { t: number; what: string }[] = [];
+const seen = new Set<string>();
+function note(t: number, key: string, what: string) {
+	if (seen.has(key)) return;
+	seen.add(key);
+	if (t > 0) timeline.push({ t, what });
+}
+
+function noteState(t: number, s: GameState) {
+	for (const crop of s.unlockedCrops) note(t, `crop:${crop}`, `unlock ${CROPS[crop].name}`);
+	for (const id of UPGRADE_ORDER) {
+		const name = UPGRADES[id].name;
+		if (U.isUpgradeVisible(id, s)) note(t, `see:${id}`, `${name} appears`);
+		if (s.upgrades[id] > 0) note(t, `buy:${id}`, `first ${name}`);
+		if (U.isMaxed(id, s.upgrades[id])) note(t, `max:${id}`, `${name} maxed`);
+	}
+	const seeds = U.prestigeGain(s.runEarned);
+	for (const n of [1, 5, 10, 20, 40]) {
+		if (seeds >= n) note(t, `seeds:${n}`, `${n} legacy seed${n > 1 ? 's' : ''} for sale`);
+	}
+}
+
+noteState(0, get(gameStore));
 
 let lastEarned = 0;
 let lastMark = start;
@@ -114,6 +166,7 @@ for (let t = 0; t <= marks[marks.length - 1]; t += STEP) {
 	}
 
 	const s = get(gameStore);
+	if (t % 1000 === 0) noteState(t, s);
 	if (firstPrestige === null && U.prestigeGain(s.runEarned) >= 1) firstPrestige = t;
 	if (marks.includes(t)) {
 		const rate = (s.runEarned - lastEarned) / ((fakeNow - lastMark) / 1000);
@@ -141,3 +194,28 @@ console.log(
 	'first legacy seed available at',
 	firstPrestige === null ? 'never' : U.formatDuration(firstPrestige)
 );
+
+if (process.argv.includes('--timeline')) {
+	console.log('\ntimeline:');
+	for (const { t, what } of timeline) console.log(`${U.formatDuration(t).padStart(8)}  ${what}`);
+}
+
+// Longest stretch with nothing new, per window
+for (const [from, to] of [
+	[0, 30],
+	[30, 60],
+	[60, 120]
+]) {
+	const times = [from * 60_000, ...timeline.map((e) => e.t), to * 60_000].filter(
+		(t) => t >= from * 60_000 && t <= to * 60_000
+	);
+	let gap = 0;
+	let at = 0;
+	for (let i = 1; i < times.length; i++) {
+		if (times[i] - times[i - 1] > gap) [gap, at] = [times[i] - times[i - 1], times[i - 1]];
+	}
+	const count = times.length - 2;
+	console.log(
+		`${from}-${to}m: ${count} new things, longest wait ${U.formatDuration(gap)} (from ${U.formatDuration(at)})`
+	);
+}
