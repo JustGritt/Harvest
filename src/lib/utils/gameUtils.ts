@@ -50,6 +50,18 @@ export function isMaxed(id: UpgradeId, level: number): boolean {
 	return max !== undefined && level >= max;
 }
 
+/** Shown (and buyable) once its prerequisite upgrade is owned and its crop unlocked. */
+export function isUpgradeVisible(
+	id: UpgradeId,
+	state: Pick<GameState, 'upgrades' | 'unlockedCrops'>
+): boolean {
+	const { requires, requiresCrop } = UPGRADES[id];
+	return (
+		(!requires || state.upgrades[requires] > 0) &&
+		(!requiresCrop || state.unlockedCrops.includes(requiresCrop))
+	);
+}
+
 export function growthMultiplier(upgrades: UpgradeLevels): number {
 	return BALANCE.sprinklerFactor ** upgrades.sprinkler;
 }
@@ -91,30 +103,34 @@ export function growStage(progress: number): { stage: GrowStage; scale: number }
 
 // ---------- Mutations ----------
 
-/** Chance that one planting gets this mutation. */
-export function mutationChance(id: MutationId): number {
-	return MUTATIONS[id].chance;
+/** Chance that one planting gets this mutation (0 while it's locked). */
+export function mutationChance(id: MutationId, upgrades: UpgradeLevels): number {
+	const { chance, unlockedBy } = MUTATIONS[id];
+	if (unlockedBy && upgrades[unlockedBy] < 1) return 0;
+	return chance * (1 + upgrades.luckyClover * BALANCE.luckyCloverBonus);
 }
 
-/** Value multiplier of a mutation (1 for an ordinary crop). */
-export function mutationMultiplier(id: MutationId | null): number {
-	return id ? MUTATIONS[id].multiplier : 1;
+/** Value multiplier of a mutation (1 for an ordinary crop). Prize Ribbons grow the extra part. */
+export function mutationMultiplier(id: MutationId | null, upgrades: UpgradeLevels): number {
+	if (!id) return 1;
+	const extra = MUTATIONS[id].multiplier - 1;
+	return 1 + extra * (1 + upgrades.prizeRibbons * BALANCE.prizeRibbonBonus);
 }
 
 /** The mutation for a planting, given a uniform random `roll` in [0, 1). Rarest is checked first. */
-export function rollMutation(roll: number): MutationId | null {
+export function rollMutation(upgrades: UpgradeLevels, roll: number): MutationId | null {
 	let edge = 0;
 	for (const id of [...MUTATION_ORDER].reverse()) {
-		edge += mutationChance(id);
+		edge += mutationChance(id, upgrades);
 		if (roll < edge) return id;
 	}
 	return null;
 }
 
 /** Average value multiplier from mutations over many plantings. */
-export function expectedMutationMultiplier(): number {
+export function expectedMutationMultiplier(upgrades: UpgradeLevels): number {
 	return MUTATION_ORDER.reduce(
-		(sum, id) => sum + mutationChance(id) * (mutationMultiplier(id) - 1),
+		(sum, id) => sum + mutationChance(id, upgrades) * (mutationMultiplier(id, upgrades) - 1),
 		1
 	);
 }
@@ -124,7 +140,9 @@ export function harvestValue(
 	state: Pick<GameState, 'upgrades' | 'legacySeeds'>,
 	mutation: MutationId | null = null
 ) {
-	return Math.round(CROPS[crop].value * valueMultiplier(state) * mutationMultiplier(mutation));
+	return Math.round(
+		CROPS[crop].value * valueMultiplier(state) * mutationMultiplier(mutation, state.upgrades)
+	);
 }
 
 /** Money per second one plot earns with this crop, ignoring time spent empty. */
@@ -187,6 +205,20 @@ export function describeEffect(id: UpgradeId, state: GameState): string {
 				`×${(BALANCE.fertilizerFactor ** u.fertilizer).toFixed(2)}`,
 				`×${(BALANCE.fertilizerFactor ** next.fertilizer).toFixed(2)} value`
 			);
+		case 'luckyClover':
+			return show(
+				`×${(1 + u.luckyClover * BALANCE.luckyCloverBonus).toFixed(1)}`,
+				`×${(1 + next.luckyClover * BALANCE.luckyCloverBonus).toFixed(1)} mutation chance`
+			);
+		case 'prizeRibbons':
+			return show(
+				`×${formatMultiplier(mutationMultiplier('golden', u))}`,
+				`×${formatMultiplier(mutationMultiplier('golden', next))} for Golden`
+			);
+		case 'rainbowSeeds':
+			return u.rainbowSeeds > 0
+				? `Rainbow ×${formatMultiplier(mutationMultiplier('rainbow', u))}`
+				: `Rainbow crops ×${formatMultiplier(mutationMultiplier('rainbow', next))}`;
 		case 'expandField': {
 			const a = fieldSize(u.expandField);
 			const b = fieldSize(next.expandField);
@@ -225,6 +257,10 @@ export function formatDuration(ms: number): string {
 
 function formatRate(count: number, intervalMs: number): string {
 	return `${((count * 1000) / intervalMs).toFixed(2)}/s`;
+}
+
+function formatMultiplier(x: number): string {
+	return Number.isInteger(x) ? String(x) : x.toFixed(1);
 }
 
 function formatPercentFaster(multiplier: number): string {

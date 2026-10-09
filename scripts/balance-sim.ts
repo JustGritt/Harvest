@@ -74,7 +74,10 @@ function buyCheapest() {
 	for (let i = 0; i < 20; i++) {
 		const s = get(gameStore);
 		const options: { cost: number; buy: () => void }[] = UPGRADE_ORDER.filter(
-			(id) => !U.isMaxed(id, s.upgrades[id]) && !(mode === 'active' && WORKER_UPGRADES.includes(id))
+			(id) =>
+				U.isUpgradeVisible(id, s) &&
+				!U.isMaxed(id, s.upgrades[id]) &&
+				!(mode === 'active' && WORKER_UPGRADES.includes(id))
 		).map((id) => ({
 			cost: U.upgradeCost(id, s.upgrades[id]),
 			buy: () => gameStore.buyUpgrade(id)
@@ -123,6 +126,7 @@ for (let t = 0; t <= marks[marks.length - 1]; t += STEP) {
 				s.selectedCrop.padEnd(9),
 				`F${u.farmer}/P${u.seedPlanter} FT${u.farmerTraining}/PG${u.planterGears}`,
 				`Sp${u.sprinkler} QS${u.qualitySeeds} Fe${u.fertilizer} Fld${u.expandField}`,
+				`LC${u.luckyClover} PR${u.prizeRibbons} RS${u.rainbowSeeds}`,
 				`🌟${U.prestigeGain(s.runEarned)}`,
 				`mut ${Math.round((mutatedEarned / Math.max(1, s.runEarned - lastEarned)) * 100)}%`
 			].join('  ')

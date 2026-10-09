@@ -1,6 +1,6 @@
-import type { UpgradeId } from '$lib/types';
+import type { CropId, UpgradeId } from '$lib/types';
 
-export type UpgradeCategory = 'workers' | 'growth' | 'field';
+export type UpgradeCategory = 'workers' | 'growth' | 'mutations' | 'field';
 
 export interface UpgradeDef {
 	id: UpgradeId;
@@ -13,6 +13,8 @@ export interface UpgradeDef {
 	maxLevel?: number;
 	/** Hidden until at least one level of this upgrade is owned. */
 	requires?: UpgradeId;
+	/** Hidden until this crop is unlocked. */
+	requiresCrop?: CropId;
 }
 
 export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
@@ -85,6 +87,36 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
 		baseCost: 250,
 		costGrowth: 2.3,
 		maxLevel: 10
+	},
+	luckyClover: {
+		id: 'luckyClover',
+		name: 'Lucky Clover',
+		description: 'Mutations are 20% more likely.',
+		category: 'mutations',
+		baseCost: 8_000,
+		costGrowth: 2,
+		maxLevel: 10,
+		requiresCrop: 'pumpkin'
+	},
+	prizeRibbons: {
+		id: 'prizeRibbons',
+		name: 'Prize Ribbons',
+		description: 'Mutation bonuses are 25% bigger.',
+		category: 'mutations',
+		baseCost: 150_000,
+		costGrowth: 2.2,
+		maxLevel: 10,
+		requires: 'luckyClover'
+	},
+	rainbowSeeds: {
+		id: 'rainbowSeeds',
+		name: 'Rainbow Seeds',
+		description: 'Unlocks the Rainbow mutation, the rarest of all.',
+		category: 'mutations',
+		baseCost: 20_000_000,
+		costGrowth: 1,
+		maxLevel: 1,
+		requiresCrop: 'sunflower'
 	}
 };
 
@@ -96,5 +128,8 @@ export const UPGRADE_ORDER: UpgradeId[] = [
 	'sprinkler',
 	'qualitySeeds',
 	'fertilizer',
+	'luckyClover',
+	'prizeRibbons',
+	'rainbowSeeds',
 	'expandField'
 ];

@@ -2,7 +2,6 @@ import { get, writable } from 'svelte/store';
 import { BALANCE } from '$lib/data/balance';
 import { CROPS } from '$lib/data/crops';
 import { MUTATIONS } from '$lib/data/mutations';
-import { UPGRADES } from '$lib/data/upgrades';
 import type { Cell, CropId, GameState, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 import {
 	farmerInterval,
@@ -10,6 +9,7 @@ import {
 	growTime,
 	harvestValue,
 	isMaxed,
+	isUpgradeVisible,
 	planterInterval,
 	prestigeGain,
 	resizeField,
@@ -41,7 +41,10 @@ function createInitialState(
 			sprinkler: 0,
 			qualitySeeds: 0,
 			fertilizer: 0,
-			expandField: 0
+			expandField: 0,
+			luckyClover: 0,
+			prizeRibbons: 0,
+			rainbowSeeds: 0
 		},
 		unlockedCrops: ['wheat'],
 		selectedCrop: 'wheat',
@@ -64,7 +67,7 @@ function plantCell(state: GameState, cell: Cell, now: number) {
 	cell.crop = state.selectedCrop;
 	cell.plantedAt = now;
 	cell.readyAt = now + growTime(state.selectedCrop, state.upgrades);
-	cell.mutation = rollMutation(Math.random());
+	cell.mutation = rollMutation(state.upgrades, Math.random());
 }
 
 function harvestCell(state: GameState, cell: Cell, auto: boolean) {
@@ -235,10 +238,9 @@ function createGameStore() {
 
 		buyUpgrade: (id: UpgradeId) => {
 			update((state) => {
-				const def = UPGRADES[id];
 				const level = state.upgrades[id];
 				if (isMaxed(id, level)) return state;
-				if (def.requires && state.upgrades[def.requires] < 1) return state;
+				if (!isUpgradeVisible(id, state)) return state;
 				const cost = upgradeCost(id, level);
 				if (state.money < cost) return state;
 				state.money -= cost;

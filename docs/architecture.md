@@ -131,7 +131,7 @@ How it's built:
 **A new upgrade**
 
 1. Add its id to `UpgradeId` in `types.ts` and its default level to `createInitialState()` in `store.ts`.
-2. Add its definition to `UPGRADES` and `UPGRADE_ORDER` in `data/upgrades.ts`.
+2. Add its definition to `UPGRADES` and `UPGRADE_ORDER` in `data/upgrades.ts` (`requires` / `requiresCrop` hide it until then), and its sprite to `UPGRADE_ART` in `art/ids.ts`.
 3. Apply its effect inside the relevant formula in `gameUtils.ts`.
 4. Add a `case` to `describeEffect()`. TypeScript will complain until you do.
 5. Run `yarn sim` and update `docs/game-mechanics.md`.

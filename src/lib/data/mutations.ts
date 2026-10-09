@@ -1,4 +1,4 @@
-import type { MutationId } from '$lib/types';
+import type { MutationId, UpgradeId } from '$lib/types';
 
 export interface MutationDef {
 	id: MutationId;
@@ -7,6 +7,8 @@ export interface MutationDef {
 	multiplier: number;
 	/** Chance per planting before upgrades. */
 	chance: number;
+	/** Upgrade that must be owned before this mutation can appear. */
+	unlockedBy?: UpgradeId;
 	/** Colour for labels and the ripe value tag. */
 	tint: string;
 }
@@ -33,8 +35,16 @@ export const MUTATIONS: Record<MutationId, MutationDef> = {
 		multiplier: 10,
 		chance: 0.004,
 		tint: '#e09b0b'
+	},
+	rainbow: {
+		id: 'rainbow',
+		name: 'Rainbow',
+		multiplier: 50,
+		chance: 0.001,
+		tint: '#4a97c2',
+		unlockedBy: 'rainbowSeeds'
 	}
 };
 
 /** Commonest first. Rolls check the rarest first. */
-export const MUTATION_ORDER: MutationId[] = ['bountiful', 'giant', 'golden'];
+export const MUTATION_ORDER: MutationId[] = ['bountiful', 'giant', 'golden', 'rainbow'];

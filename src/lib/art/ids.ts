@@ -31,6 +31,9 @@ export const ART_IDS = [
 	'quality-seeds',
 	'fertilizer',
 	'expand-field',
+	'lucky-clover',
+	'prize-ribbon',
+	'rainbow-seeds',
 	// currency
 	'coin',
 	'legacy-seed',
@@ -67,5 +70,8 @@ export const UPGRADE_ART: Record<UpgradeId, ArtId> = {
 	sprinkler: 'sprinkler',
 	qualitySeeds: 'quality-seeds',
 	fertilizer: 'fertilizer',
-	expandField: 'expand-field'
+	expandField: 'expand-field',
+	luckyClover: 'lucky-clover',
+	prizeRibbons: 'prize-ribbon',
+	rainbowSeeds: 'rainbow-seeds'
 };

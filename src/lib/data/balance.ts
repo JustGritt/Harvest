@@ -15,6 +15,11 @@ export const BALANCE = {
 	/** Compounding value multiplier per Fertilizer level. */
 	fertilizerFactor: 1.1,
 
+	/** Additive mutation chance bonus per Lucky Clover level (×1.2, ×1.4, …). */
+	luckyCloverBonus: 0.2,
+	/** Additive bonus to each mutation's extra value per Prize Ribbons level. */
+	prizeRibbonBonus: 0.25,
+
 	/** Income bonus per legacy seed. */
 	legacySeedBonus: 0.1,
 	/** Legacy seeds earned on prestige = floor(sqrt(runEarned / prestigeDivisor)). */

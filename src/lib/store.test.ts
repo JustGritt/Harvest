@@ -146,6 +146,13 @@ describe('mutations', () => {
 		expect(state().field[0][0]).toMatchObject({ status: 'growing', mutation: 'golden' });
 	});
 
+	it('can be Rainbow once Rainbow Seeds is bought', () => {
+		vi.mocked(Math.random).mockReturnValue(0);
+		state().upgrades.rainbowSeeds = 1;
+		gameStore.plantCrop(0, 0);
+		expect(state().field[0][0].mutation).toBe('rainbow');
+	});
+
 	it('loads old cells without a mutation, and drops unknown ones', () => {
 		gameStore.plantCrop(0, 0);
 		const saved = JSON.parse(JSON.stringify(state()));
@@ -180,6 +187,15 @@ describe('buyUpgrade', () => {
 		gameStore.buyUpgrade('sprinkler');
 		expect(state().upgrades.sprinkler).toBe(15);
 		expect(state().money).toBe(1e12);
+	});
+
+	it('requires the crop a mutation upgrade waits for', () => {
+		state().money = 1e9;
+		gameStore.buyUpgrade('luckyClover');
+		expect(state().upgrades.luckyClover).toBe(0);
+		state().unlockedCrops.push('pumpkin');
+		gameStore.buyUpgrade('luckyClover');
+		expect(state().upgrades.luckyClover).toBe(1);
 	});
 
 	it('requires the prerequisite upgrade', () => {

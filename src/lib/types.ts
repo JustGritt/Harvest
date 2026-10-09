@@ -8,12 +8,15 @@ export type UpgradeId =
 	| 'sprinkler'
 	| 'qualitySeeds'
 	| 'fertilizer'
-	| 'expandField';
+	| 'expandField'
+	| 'luckyClover'
+	| 'prizeRibbons'
+	| 'rainbowSeeds';
 
 export type UpgradeLevels = Record<UpgradeId, number>;
 
 /** A rare variant rolled at planting that sells for more. */
-export type MutationId = 'bountiful' | 'giant' | 'golden';
+export type MutationId = 'bountiful' | 'giant' | 'golden' | 'rainbow';
 
 export type CellStatus = 'empty' | 'growing' | 'ready';
 

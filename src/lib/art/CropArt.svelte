@@ -6,7 +6,7 @@
 
 	export let crop: CropId;
 	export let stage: GrowStage | 'mature';
-	/** Drawn as twins (Bountiful), bigger (Giant) or recoloured gold (Golden). */
+	/** Twins (Bountiful), bigger (Giant), recoloured gold (Golden) or hue-cycling (Rainbow). */
 	export let mutation: MutationId | null = null;
 	let klass = '';
 	export { klass as class };
@@ -14,21 +14,32 @@
 	$: id = cropArt(crop, stage);
 	// Recoloured gold with a warm glow, so it stands out even on wheat
 	$: filter =
-		mutation === 'golden' ? 'url(#mut-golden) drop-shadow(0 0 3px var(--color-gold-300))' : '';
+		mutation === 'golden'
+			? 'url(#mut-golden) drop-shadow(0 0 3px var(--color-gold-300))'
+			: mutation === 'rainbow'
+				? 'url(#mut-golden) drop-shadow(0 0 3px var(--color-gold-200))'
+				: '';
 </script>
 
 <!-- Fills its box; the crop stands on the bottom edge. `class` can add its own filter (shadow). -->
 <span class="relative block size-full origin-bottom {klass}">
-	<span class="relative block size-full origin-bottom" style:filter>
-		{#if mutation === 'bountiful'}
-			<Art {id} size="76%" class="absolute bottom-0 left-[-6%]" />
-			<Art {id} size="76%" class="absolute right-[-6%] bottom-0" />
-		{:else}
-			<Art
-				{id}
-				size="100%"
-				class="block origin-bottom {mutation === 'giant' ? 'scale-[1.28]' : ''}"
-			/>
-		{/if}
+	<!-- Rainbow cycles hue over the gold map (a fixed shift without motion) -->
+	<span
+		class="relative block size-full origin-bottom {mutation === 'rainbow'
+			? 'motion-safe:animate-rainbow motion-reduce:[filter:hue-rotate(200deg)_saturate(1.8)]'
+			: ''}"
+	>
+		<span class="relative block size-full origin-bottom" style:filter>
+			{#if mutation === 'bountiful'}
+				<Art {id} size="76%" class="absolute bottom-0 left-[-6%]" />
+				<Art {id} size="76%" class="absolute right-[-6%] bottom-0" />
+			{:else}
+				<Art
+					{id}
+					size="100%"
+					class="block origin-bottom {mutation === 'giant' ? 'scale-[1.28]' : ''}"
+				/>
+			{/if}
+		</span>
 	</span>
 </span>

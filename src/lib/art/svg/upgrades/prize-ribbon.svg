@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	<!-- tails -->
+	<path d="M19 24 L13.5 41 L17.5 39 L20.5 42.5 L25 27 Z" fill="#b3352c" stroke="#3b271b" stroke-width="2"/>
+	<path d="M29 24 L34.5 41 L30.5 39 L27.5 42.5 L23 27 Z" fill="#d1453b" stroke="#3b271b" stroke-width="2"/>
+	<!-- rosette -->
+	<path d="M24.00 5.50 Q28.01 3.03 30.25 7.17 Q34.96 7.04 34.83 11.75 Q38.97 13.99 36.50 18.00 Q38.97 22.01 34.83 24.25 Q34.96 28.96 30.25 28.83 Q28.01 32.97 24.00 30.50 Q19.99 32.97 17.75 28.83 Q13.04 28.96 13.17 24.25 Q9.03 22.01 11.50 18.00 Q9.03 13.99 13.17 11.75 Q13.04 7.04 17.75 7.17 Q19.99 3.03 24.00 5.50 Z" fill="#d1453b" stroke="#3b271b" stroke-width="2"/>
+	<circle cx="24" cy="18" r="8.5" fill="#f5b91f" stroke="#3b271b" stroke-width="2"/>
+	<path d="M18.5 16 C19 13.5 21 12 23.5 11.7" stroke="#ffe58a" stroke-width="1.6"/>
+	<path d="M29.5 20.5 C28.5 23 26.5 24 24 24.3" stroke="#b77706" stroke-width="1.6"/>
+	<path transform="translate(24 18) scale(0.75)" d="M0 -6 C0.8 -1.5 1.5 -0.8 6 0 C1.5 0.8 0.8 1.5 0 6 C-0.8 1.5 -1.5 0.8 -6 0 C-1.5 -0.8 -0.8 -1.5 0 -6 Z" fill="#fff4c2" stroke="#3b271b" stroke-width="2"/>
+</svg>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '$lib/data/balance';
-import type { UpgradeLevels } from '$lib/types';
+import type { CropId, UpgradeLevels } from '$lib/types';
 import {
 	createCell,
 	cropRate,
@@ -14,6 +14,8 @@ import {
 	growTime,
 	harvestValue,
 	isMaxed,
+	isUpgradeVisible,
+	mutationChance,
 	mutationMultiplier,
 	prestigeGain,
 	prestigeThreshold,
@@ -32,6 +34,9 @@ const levels = (overrides: Partial<UpgradeLevels> = {}): UpgradeLevels => ({
 	qualitySeeds: 0,
 	fertilizer: 0,
 	expandField: 0,
+	luckyClover: 0,
+	prizeRibbons: 0,
+	rainbowSeeds: 0,
 	...overrides
 });
 
@@ -103,16 +108,16 @@ describe('mutations', () => {
 	const { bountiful, giant, golden } = MUTATIONS;
 
 	it('rolls the rarest first, then commoner ones, then nothing', () => {
-		expect(rollMutation(0)).toBe('golden');
-		expect(rollMutation(golden.chance - 1e-9)).toBe('golden');
-		expect(rollMutation(golden.chance)).toBe('giant');
-		expect(rollMutation(golden.chance + giant.chance)).toBe('bountiful');
-		expect(rollMutation(golden.chance + giant.chance + bountiful.chance)).toBeNull();
-		expect(rollMutation(0.999)).toBeNull();
+		expect(rollMutation(s.upgrades, 0)).toBe('golden');
+		expect(rollMutation(s.upgrades, golden.chance - 1e-9)).toBe('golden');
+		expect(rollMutation(s.upgrades, golden.chance)).toBe('giant');
+		expect(rollMutation(s.upgrades, golden.chance + giant.chance)).toBe('bountiful');
+		expect(rollMutation(s.upgrades, golden.chance + giant.chance + bountiful.chance)).toBeNull();
+		expect(rollMutation(s.upgrades, 0.999)).toBeNull();
 	});
 
 	it('multiplies the harvest value', () => {
-		expect(mutationMultiplier(null)).toBe(1);
+		expect(mutationMultiplier(null, s.upgrades)).toBe(1);
 		expect(harvestValue('carrot', s, 'giant')).toBe(40 * giant.multiplier);
 		expect(harvestValue('carrot', s, null)).toBe(40);
 	});
@@ -123,7 +128,42 @@ describe('mutations', () => {
 			bountiful.chance * (bountiful.multiplier - 1) +
 			giant.chance * (giant.multiplier - 1) +
 			golden.chance * (golden.multiplier - 1);
-		expect(expectedMutationMultiplier()).toBeCloseTo(expected);
+		expect(expectedMutationMultiplier(s.upgrades)).toBeCloseTo(expected);
+	});
+
+	it('keeps Rainbow out of rolls until Rainbow Seeds is bought', () => {
+		expect(mutationChance('rainbow', levels())).toBe(0);
+		const unlocked = levels({ rainbowSeeds: 1 });
+		expect(mutationChance('rainbow', unlocked)).toBe(MUTATIONS.rainbow.chance);
+		expect(rollMutation(unlocked, 0)).toBe('rainbow');
+		expect(rollMutation(unlocked, MUTATIONS.rainbow.chance)).toBe('golden');
+	});
+
+	it('Lucky Clover raises every chance by 20% a level', () => {
+		expect(mutationChance('giant', levels({ luckyClover: 5 }))).toBeCloseTo(giant.chance * 2);
+	});
+
+	it('Prize Ribbons grow the extra value by 25% a level', () => {
+		// Golden ×10 has +9 extra; 4 levels double it to +18
+		expect(mutationMultiplier('golden', levels({ prizeRibbons: 4 }))).toBe(19);
+		expect(mutationMultiplier(null, levels({ prizeRibbons: 4 }))).toBe(1);
+	});
+});
+
+describe('isUpgradeVisible', () => {
+	const at = (upgrades: Partial<UpgradeLevels>, unlockedCrops: CropId[] = ['wheat']) => ({
+		upgrades: levels(upgrades),
+		unlockedCrops
+	});
+
+	it('waits for the prerequisite upgrade and crop', () => {
+		expect(isUpgradeVisible('farmer', at({}))).toBe(true);
+		expect(isUpgradeVisible('farmerTraining', at({}))).toBe(false);
+		expect(isUpgradeVisible('farmerTraining', at({ farmer: 1 }))).toBe(true);
+		expect(isUpgradeVisible('luckyClover', at({}, ['wheat', 'carrot']))).toBe(false);
+		expect(isUpgradeVisible('luckyClover', at({}, ['wheat', 'carrot', 'pumpkin']))).toBe(true);
+		expect(isUpgradeVisible('prizeRibbons', at({}, ['wheat', 'pumpkin']))).toBe(false);
+		expect(isUpgradeVisible('prizeRibbons', at({ luckyClover: 1 }))).toBe(true);
 	});
 });
 

@@ -79,7 +79,7 @@
 				</span>
 			</span>
 		{/key}
-		{#if ready || mutation?.id === 'golden'}
+		{#if ready || mutation?.id === 'golden' || mutation?.id === 'rainbow'}
 			<span
 				class="motion-safe:animate-glint absolute top-[12%] right-[14%] hidden size-[24%] motion-safe:block"
 				style="animation-delay: {glintDelay}ms"

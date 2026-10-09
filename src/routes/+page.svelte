@@ -47,6 +47,7 @@
 		growTime,
 		harvestValue,
 		isMaxed,
+		isUpgradeVisible,
 		planterInterval,
 		prestigeGain,
 		prestigeThreshold,
@@ -56,6 +57,7 @@
 	const SECTIONS: { category: UpgradeCategory; title: string; icon: ArtId }[] = [
 		{ category: 'workers', title: 'Workers', icon: 'farmer' },
 		{ category: 'growth', title: 'Growth & Value', icon: 'leaf' },
+		{ category: 'mutations', title: 'Mutations', icon: 'lucky-clover' },
 		{ category: 'field', title: 'Field', icon: 'expand-field' }
 	];
 
@@ -279,11 +281,14 @@
 				moneyBump++;
 			}
 		});
-		pluck(rect, cropArt(crop, 'mature'), mutation === 'golden' ? 'url(#mut-golden)' : '');
+		pluck(rect, cropArt(crop, 'mature'), tier >= 3 ? 'url(#mut-golden)' : '');
 		ring(at, w * (1.1 + hype * 0.6 + tier * 0.35));
 		if (tier >= 2) ring(at, w * (0.8 + tier * 0.4));
-		if (mutation === 'golden') {
+		if (tier >= 3) {
 			burst(at, { art: 'coin', count: 8, spread: w * 1.1, size: w * 0.24, duration: 800 });
+		}
+		if (mutation === 'rainbow') {
+			burst(at, { art: 'petal', count: 10, spread: w * 1.4, size: w * 0.22, duration: 900 });
 		}
 		burst(at, {
 			art: 'leaf',
@@ -348,10 +353,7 @@
 		lastSwept = null;
 	}
 
-	function isVisible(id: UpgradeId) {
-		const requires = UPGRADES[id].requires;
-		return !requires || game.upgrades[requires] > 0;
-	}
+	const isVisible = (id: UpgradeId) => isUpgradeVisible(id, game);
 
 	// Which confirmation dialog is open
 	let confirming: 'sell' | 'reset' | 'import' | null = null;

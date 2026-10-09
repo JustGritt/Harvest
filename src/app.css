@@ -64,6 +64,7 @@
 	--animate-shine: shine 0.6s ease-out;
 	--animate-bob: bob 1.2s ease-in-out infinite;
 	--animate-thump: thump 0.28s ease-out;
+	--animate-rainbow: rainbow 3s linear infinite;
 
 	@keyframes float-up {
 		from {
@@ -155,6 +156,16 @@
 		82% {
 			transform: scale(1) rotate(45deg);
 			opacity: 1;
+		}
+	}
+
+	/* Rainbow mutation: the gold-mapped crop cycles through every hue */
+	@keyframes rainbow {
+		from {
+			filter: hue-rotate(0deg) saturate(1.8);
+		}
+		to {
+			filter: hue-rotate(360deg) saturate(1.8);
 		}
 	}
 

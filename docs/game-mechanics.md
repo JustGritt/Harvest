@@ -54,8 +54,16 @@ Every planting (by hand or by a seed planter) rolls for a mutation, which multip
 | Bountiful |    ×2 |                  5% |
 | Giant     |    ×4 |                1.5% |
 | Golden    |   ×10 |                0.4% |
+| Rainbow   |   ×50 |                0.1% |
 
-`rollMutation(roll)` checks the rarest first: `roll < golden` is Golden, then `roll < golden + giant` is Giant, and so on. On average mutations add `Σ chance × (multiplier − 1)` ≈ **+16.5%** income (`expectedMutationMultiplier`), and about one harvest in 14 is mutated. Numbers live in `data/mutations.ts`.
+Rainbow can only appear after buying **Rainbow Seeds**.
+
+```
+mutationChance     = chance × (1 + 0.2 × luckyClover)          (0 while locked)
+mutationMultiplier = 1 + (multiplier − 1) × (1 + 0.25 × prizeRibbons)
+```
+
+`rollMutation(roll)` checks the rarest first: `roll < golden` is Golden, then `roll < golden + giant` is Giant, and so on. On average mutations add `Σ chance × (mutationMultiplier − 1)` (`expectedMutationMultiplier`): **+16.5%** income with no upgrades, about one harvest in 14 mutated. With Lucky Clover and Prize Ribbons maxed and Rainbow unlocked, mutations make up most of a run's income. Numbers live in `data/mutations.ts`.
 
 ## Upgrades
 
@@ -68,9 +76,13 @@ Every planting (by hand or by a seed planter) rolls for a mutation, which multip
 | 💧 Sprinkler       |       150 |   ×1.7 |  15 | Grow time ×0.92 (−71% at max)                          |
 | ✨ Quality Seeds   |       100 |   ×1.4 |   — | +20% harvest value (additive)                          |
 | 🧪 Fertilizer      |     1,000 |   ×1.6 |   — | ×1.1 harvest value (compounding)                       |
+| 🍀 Lucky Clover    |     8,000 |     ×2 |  10 | Mutation chance ×(1 + 0.2 × level) (×3 at max)         |
+| 🎀 Prize Ribbons   |   150,000 |   ×2.2 |  10 | Each mutation's extra value ×(1 + 0.25 × level)        |
+| 🌈 Rainbow Seeds   |       20M |      — |   1 | Unlocks the Rainbow mutation                           |
 | 🚜 Expand Field    |       250 |   ×2.3 |  10 | +1 column or row                                       |
 
 - Farmer Training appears once you own a farmer; Planter Gears appears once you own a seed planter.
+- The Mutations section opens with pumpkin: Lucky Clover appears once pumpkin is unlocked, Prize Ribbons once you own a Lucky Clover, and Rainbow Seeds once sunflower is unlocked (`requires` / `requiresCrop`, checked by `isUpgradeVisible`).
 - An upgrade at its max level shows **MAX**, can't be bought, and never charges money.
 - A purchase button is disabled while you can't afford it.
 - Every upgrade shows its effect as "current → next".
@@ -121,10 +133,10 @@ Results for the current numbers:
 | Time | Mixed (idle after 2m) | Active (clicks only) | Mixed crop | First 🌟         |
 | ---: | --------------------: | -------------------: | ---------- | ---------------- |
 |   2m |                  68/s |                108/s | wheat      |                  |
-|  10m |                2.4K/s |               4.3K/s | pumpkin    |                  |
-|  20m |               21.8K/s |              22.1K/s | sunflower  | mixed: ~11m      |
-|  60m |               76.9K/s |              47.7K/s | sunflower  | 12 seeds by 60m  |
-| 120m |                111K/s |              66.7K/s | sunflower  | 23 seeds by 120m |
+|  10m |                2.5K/s |               4.3K/s | pumpkin    |                  |
+|  20m |               25.2K/s |              30.3K/s | sunflower  | mixed: ~11m      |
+|  60m |                155K/s |              99.4K/s | sunflower  | 17 seeds by 60m  |
+| 120m |                321K/s |               187K/s | sunflower  | 35 seeds by 120m |
 
 An idle player who stops clicking at 2 minutes keeps pace with a perfect nonstop clicker, and pulls ahead after about 20 minutes. The active bot clicks 4 times a second without ever stopping, which no real player does, so a real player who clicks only some of the time falls well below the idle line.
 
