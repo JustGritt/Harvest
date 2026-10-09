@@ -18,7 +18,7 @@ Every number lives in `src/lib/data/` (`balance.ts`, `crops.ts`, `upgrades.ts`),
    └───────────────────── harvest (click or farmer) ◀─────────────────────┘
 ```
 
-Clicking an empty plot plants the **selected seed**. Clicking a ready plot harvests it; so does clicking a growing plot whose `readyAt` has already passed, without waiting for the next tick. Clicking a plot that is still growing does nothing.
+Clicking an empty plot plants the **selected seed**. Clicking a ready plot harvests it; so does clicking a growing plot whose `readyAt` has already passed, without waiting for the next tick. Clicking a plot that is still growing does nothing. Plots act on press, and dragging on from the pressed plot repeats the action on every plot passed over: it harvests ripe plots, or plants empty ones if the drag started on an empty plot. That makes a full field quicker to work by hand than the sim's 4 clicks per second, but it can't beat the field's own throughput (each plot still has to grow).
 
 ## Crops
 

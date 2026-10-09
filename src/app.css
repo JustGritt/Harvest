@@ -63,6 +63,7 @@
 	--animate-glint: glint 2.6s ease-in-out infinite;
 	--animate-shine: shine 0.6s ease-out;
 	--animate-bob: bob 1.2s ease-in-out infinite;
+	--animate-thump: thump 0.28s ease-out;
 
 	@keyframes float-up {
 		from {
@@ -154,6 +155,16 @@
 		82% {
 			transform: scale(1) rotate(45deg);
 			opacity: 1;
+		}
+	}
+
+	/* A plot taking the hit of a harvest */
+	@keyframes thump {
+		30% {
+			transform: scale(1.08, 0.86);
+		}
+		65% {
+			transform: scale(0.97, 1.04);
 		}
 	}
 

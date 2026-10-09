@@ -9,8 +9,10 @@
 
 	export let money: number;
 	export let incomePerSec: number;
-	/** Changing this replays the bump animation (player harvests). */
+	/** Changing this replays the bump animation (a harvest coin landing). */
 	export let bump = 0;
+	/** Money already earned but still flying to the counter as coins; shown once they land. */
+	export let pending = 0;
 	export let compact = false;
 
 	// Counts up to the new amount; drops (purchases, prestige) jump straight there
@@ -18,9 +20,10 @@
 	let previous = money;
 	let animate = false;
 	onMount(() => (animate = !reducedMotion()));
+	$: target = Math.max(0, money - pending);
 	$: {
-		shown.set(money, { duration: animate && money > previous ? 300 : 0 });
-		previous = money;
+		shown.set(target, { duration: animate && target > previous ? 300 : 0 });
+		previous = target;
 	}
 </script>
 

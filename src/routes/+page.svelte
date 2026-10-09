@@ -15,7 +15,17 @@
 	import Panel from '$lib/components/Panel.svelte';
 	import MoneyDisplay from '$lib/components/MoneyDisplay.svelte';
 	import Plot from '$lib/components/Plot.svelte';
-	import { burst, centerOf, coinCount, flyCoins, pluck, reducedMotion } from '$lib/fx/fx';
+	import {
+		burst,
+		centerOf,
+		coinCount,
+		floatText,
+		flyCoins,
+		pluck,
+		reducedMotion,
+		ring
+	} from '$lib/fx/fx';
+	import { COMBO_LABEL_FROM, NO_STREAK, nextStreak, streakHype, type Streak } from '$lib/fx/streak';
 	import { replay } from '$lib/fx/replay';
 	import fenceFrame from '$lib/art/svg/field/fence-frame.svg?url';
 	import type { Cell, CropId, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
@@ -143,16 +153,28 @@
 	// Floating "+N" pops shown over harvested plots
 	const POP_MS = 900;
 	const MAX_POPS = 30;
-	let pops: (HarvestEvent & { key: number })[] = [];
+	let pops: (HarvestEvent & { key: number; streak?: number })[] = [];
 	let nextPopKey = 0;
-	/** Bumped when harvest coins reach the counter, to replay the money animation. */
+	/** Bumped as each harvest coin reaches the counter, to replay the money animation. */
 	let moneyBump = 0;
+	/** Money from player harvests whose coins are still flying; the counter adds it as they land. */
+	let pendingMoney = 0;
+	let lastMoney = 0;
+	// Spending (or prestige) while coins fly: just show the real amount
+	$: {
+		if (game.money < lastMoney) pendingMoney = 0;
+		lastMoney = game.money;
+	}
+	/** Player reaps in quick succession (cosmetic combo). */
+	let streak: Streak = NO_STREAK;
 
 	function addPop(event: HarvestEvent) {
 		// Under heavy automation, drop farmer pops rather than flood the DOM
 		if (event.auto && pops.length >= MAX_POPS) return;
+		if (!event.auto) streak = nextStreak(streak, Date.now());
 		const key = nextPopKey++;
-		pops = [...pops.slice(-(MAX_POPS - 1)), { ...event, key }];
+		const pop = { ...event, key, streak: event.auto ? undefined : streak.count };
+		pops = [...pops.slice(-(MAX_POPS - 1)), pop];
 		setTimeout(() => {
 			pops = pops.filter((p) => p.key !== key);
 		}, POP_MS);
@@ -228,8 +250,86 @@
 		gameStore.harvestCrop(r, c);
 		const earned = get(gameStore).runEarned - before;
 		if (earned <= 0 || !crop) return;
+		reapFx(rect, crop, earned);
+	}
+
+	// Coins go first: decorative bursts leave them room under the particle cap
+	function reapFx(rect: DOMRect, crop: CropId, earned: number) {
+		const at = centerOf(rect);
+		const w = rect.width;
+		const hype = streakHype(streak.count);
+		const coins = coinCount(earned);
+		let left = earned;
+		pendingMoney += earned;
+		flyCoins(at, coins, {
+			onLand: (i) => {
+				const chunk = i === coins - 1 ? left : earned / coins;
+				left -= chunk;
+				pendingMoney = Math.max(0, pendingMoney - chunk);
+				moneyBump++;
+			}
+		});
 		pluck(rect, cropArt(crop, 'mature'));
-		flyCoins(centerOf(rect), coinCount(earned)).then(() => moneyBump++);
+		ring(at, w * (1.1 + hype * 0.6));
+		burst(at, {
+			art: 'leaf',
+			count: 3 + Math.round(hype * 3),
+			spread: w * 0.6,
+			size: w * 0.2
+		});
+		burst(at, {
+			art: 'sparkle',
+			count: 3 + Math.round(hype * 5),
+			spread: w * (0.5 + hype * 0.4),
+			size: w * 0.22
+		});
+		burst(
+			{ x: at.x, y: at.y + rect.height * 0.25 },
+			{ art: 'dirt', count: 3, spread: w * 0.35, size: w * 0.15, arc: Math.PI * 0.8 }
+		);
+		floatText({ x: at.x, y: rect.top + rect.height * 0.2 }, `+${formatNumber(earned)}`, {
+			scale: 1 + hype * 0.5,
+			combo: streak.count >= COMBO_LABEL_FROM ? streak.count : 0
+		});
+	}
+
+	// Pressing a plot acts right away; dragging on from it reaps every ripe plot passed over
+	// (or plants every empty one, if the drag started on an empty plot). Keyboard uses click.
+	let sweep: 'plant' | 'harvest' | null = null;
+	let lastSwept: string | null = null;
+
+	function pressCell(r: number, c: number, cell: Cell, event: PointerEvent) {
+		if (event.button !== 0) return;
+		sweep = cell.status === 'empty' ? 'plant' : 'harvest';
+		lastSwept = cell.id;
+		clickCell(r, c, cell, event.currentTarget as HTMLElement);
+	}
+
+	function sweepMove(event: PointerEvent) {
+		if (!sweep) return;
+		// Coalesced points catch plots a fast drag skips between events (empty for synthetic ones)
+		const points = event.getCoalescedEvents?.() ?? [];
+		for (const point of points.length ? points : [event]) {
+			const plot = document
+				.elementFromPoint(point.clientX, point.clientY)
+				?.closest<HTMLElement>('[data-cell]');
+			const id = plot?.dataset.cell;
+			if (!plot || !id || id === lastSwept) continue;
+			lastSwept = id;
+			get(gameStore).field.forEach((row, r) =>
+				row.forEach((cell, c) => {
+					if (cell.id !== id) return;
+					if (sweep === 'plant' ? cell.status === 'empty' : cell.status === 'ready') {
+						clickCell(r, c, cell, plot);
+					}
+				})
+			);
+		}
+	}
+
+	function endSweep() {
+		sweep = null;
+		lastSwept = null;
 	}
 
 	function isVisible(id: UpgradeId) {
@@ -380,11 +480,22 @@
 		<Art id="wheat-mature" size="1.3em" /> Harvest
 	</h1>
 	<div class="bg-parchment-100 rounded-lg px-2.5 py-0.5 lg:hidden">
-		<MoneyDisplay money={game.money} {incomePerSec} bump={moneyBump} compact />
+		<MoneyDisplay
+			money={game.money}
+			{incomePerSec}
+			bump={moneyBump}
+			pending={pendingMoney}
+			compact
+		/>
 	</div>
 </header>
 
-<svelte:window on:keydown={onKeydown} />
+<svelte:window
+	on:keydown={onKeydown}
+	on:pointermove={sweepMove}
+	on:pointerup={endSweep}
+	on:pointercancel={endSweep}
+/>
 
 {#if sunrise}
 	<div
@@ -410,7 +521,7 @@
 			>
 				<span class="motion-safe:animate-bob inline-block"><Art id="pointer" size="1.4em" /></span>
 				Tap an empty plot to plant {CROPS[game.selectedCrop].name.toLowerCase()}, then tap it again
-				when it glows to harvest.
+				when it glows to harvest. Drag across plots to do several at once.
 			</p>
 		{/if}
 		<!-- Fence around the field (9-slice border image) -->
@@ -427,7 +538,9 @@
 							selectedCrop={game.selectedCrop}
 							value={cell.crop ? harvestValue(cell.crop, game) : 0}
 							pops={pops.filter((p) => p.cellId === cell.id)}
-							on:click={(e) => clickCell(r, c, cell, e.currentTarget as HTMLElement)}
+							on:pointerdown={(e) => pressCell(r, c, cell, e)}
+							on:click={(e) =>
+								e.detail === 0 && clickCell(r, c, cell, e.currentTarget as HTMLElement)}
 						/>
 					</div>
 				{/each}
@@ -459,7 +572,7 @@
 			<div
 				class="border-wood-600 bg-parchment-100 hidden rounded-xl border-2 px-3 py-2 shadow-md lg:block"
 			>
-				<MoneyDisplay money={game.money} {incomePerSec} bump={moneyBump} />
+				<MoneyDisplay money={game.money} {incomePerSec} bump={moneyBump} pending={pendingMoney} />
 			</div>
 
 			<Panel title="Seeds" icon="pouch" class={panelVisibility('seeds', sheetTab)}>

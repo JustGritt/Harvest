@@ -5,6 +5,7 @@
 	import soilWet from '$lib/art/svg/field/soil-wet.svg?url';
 	import { CROPS } from '$lib/data/crops';
 	import { replay } from '$lib/fx/replay';
+	import { COMBO_LABEL_FROM } from '$lib/fx/streak';
 	import type { Cell, CropId, HarvestEvent } from '$lib/types';
 	import { formatNumber, growProgress, growStage } from '$lib/utils/gameUtils';
 
@@ -14,7 +15,8 @@
 	export let selectedCrop: CropId;
 	/** Harvest value of this plot's crop. */
 	export let value: number;
-	export let pops: (HarvestEvent & { key: number })[] = [];
+	/** Floating "+N" pops; `streak` is set on the player's own reaps. */
+	export let pops: (HarvestEvent & { key: number; streak?: number })[] = [];
 
 	$: crop = cell.crop ? CROPS[cell.crop] : null;
 	$: progress = growProgress(cell, now);
@@ -22,18 +24,22 @@
 	$: ready = cell.status === 'ready';
 	$: soil = cell.status === 'empty' ? soilDry : soilWet;
 	// Offsets each plot's ready glint so a field of ripe crops doesn't sparkle in sync
+	// The plot thumps each time the player reaps it
+	$: lastReap = pops.findLast((p) => !p.auto)?.key;
 	$: glintDelay = -([...cell.id].reduce((h, ch) => h * 31 + ch.charCodeAt(0), 7) % 2600);
 </script>
 
 <button
 	data-cell={cell.id}
-	class="group border-soil-800/50 relative flex aspect-square w-full touch-manipulation items-center justify-center overflow-hidden rounded-md border-2 pb-1.5 shadow-[inset_0_-3px_0_rgb(0_0_0/0.15)] transition-transform duration-100 select-none hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.94] sm:rounded-lg sm:pb-2 {ready
+	class="group border-soil-800/50 relative flex aspect-square w-full touch-none items-center justify-center overflow-hidden rounded-md border-2 pb-1.5 shadow-[inset_0_-3px_0_rgb(0_0_0/0.15)] transition-transform duration-100 select-none hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.94] sm:rounded-lg sm:pb-2 {ready
 		? 'border-gold-300 shadow-[0_0_12px_var(--color-gold-300),inset_0_0_10px_rgb(255_229_138/0.5)]'
 		: ''}"
 	style={`background: url("${soil}") 0 0 / 28px`}
 	aria-label={crop
 		? `${crop.name}, ${cell.status}`
 		: `Empty plot, plant ${CROPS[selectedCrop].name}`}
+	use:replay={{ key: lastReap, cls: 'motion-safe:animate-thump', when: lastReap !== undefined }}
+	on:pointerdown
 	on:click
 >
 	{#if cell.status === 'empty'}
@@ -89,12 +95,30 @@
 		{/if}
 	{/if}
 	{#each pops as pop (pop.key)}
-		<span
-			class="motion-safe:animate-float-up motion-reduce:animate-fade-out pointer-events-none absolute top-1/4 left-1/2 z-[1] -translate-x-1/2 whitespace-nowrap tabular-nums {pop.auto
-				? 'text-parchment-100 text-xs [text-shadow:0_1px_1px_rgb(0_0_0/0.6)]'
-				: 'font-display text-gold-200 text-sm font-bold [text-shadow:0_1px_2px_rgb(0_0_0/0.6)] sm:text-lg'}"
-		>
-			+{formatNumber(pop.value)}
-		</span>
+		{#if pop.auto}
+			<span
+				class="motion-safe:animate-float-up motion-reduce:animate-fade-out text-parchment-100 pointer-events-none absolute top-1/4 left-1/2 z-[1] -translate-x-1/2 text-xs whitespace-nowrap tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.6)]"
+			>
+				+{formatNumber(pop.value)}
+			</span>
+		{:else}
+			<!-- With motion the FX layer draws the player's "+N" (floatText); this is the still fallback -->
+			<span
+				class="motion-reduce:animate-fade-out font-display pointer-events-none absolute top-1/4 left-1/2 z-[1] hidden -translate-x-1/2 flex-col items-center leading-none whitespace-nowrap tabular-nums motion-reduce:flex"
+			>
+				<span
+					class="text-gold-100 text-sm font-bold [-webkit-text-stroke:3px_var(--color-wood-900)] [paint-order:stroke_fill] sm:text-xl"
+				>
+					+{formatNumber(pop.value)}
+				</span>
+				{#if (pop.streak ?? 0) >= COMBO_LABEL_FROM}
+					<span
+						class="bg-berry-500 border-berry-700 mt-0.5 rounded-full border px-1.5 py-px text-[0.65rem] font-bold text-white sm:text-xs"
+					>
+						×{pop.streak}
+					</span>
+				{/if}
+			</span>
+		{/if}
 	{/each}
 </button>
