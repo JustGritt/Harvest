@@ -4,6 +4,7 @@ import type { UpgradeLevels } from '$lib/types';
 import {
 	createCell,
 	cropRate,
+	expectedMutationMultiplier,
 	farmerInterval,
 	fieldSize,
 	formatDuration,
@@ -13,11 +14,14 @@ import {
 	growTime,
 	harvestValue,
 	isMaxed,
+	mutationMultiplier,
 	prestigeGain,
 	prestigeThreshold,
 	resizeField,
+	rollMutation,
 	upgradeCost
 } from './gameUtils';
+import { MUTATIONS } from '$lib/data/mutations';
 
 const levels = (overrides: Partial<UpgradeLevels> = {}): UpgradeLevels => ({
 	farmer: 0,
@@ -91,6 +95,35 @@ describe('harvestValue', () => {
 		// 10 × 1.2 × 1.1 × 1.3 = 17.16
 		expect(value).toBe(17);
 		expect(Number.isInteger(value)).toBe(true);
+	});
+});
+
+describe('mutations', () => {
+	const s = { upgrades: levels(), legacySeeds: 0 };
+	const { bountiful, giant, golden } = MUTATIONS;
+
+	it('rolls the rarest first, then commoner ones, then nothing', () => {
+		expect(rollMutation(0)).toBe('golden');
+		expect(rollMutation(golden.chance - 1e-9)).toBe('golden');
+		expect(rollMutation(golden.chance)).toBe('giant');
+		expect(rollMutation(golden.chance + giant.chance)).toBe('bountiful');
+		expect(rollMutation(golden.chance + giant.chance + bountiful.chance)).toBeNull();
+		expect(rollMutation(0.999)).toBeNull();
+	});
+
+	it('multiplies the harvest value', () => {
+		expect(mutationMultiplier(null)).toBe(1);
+		expect(harvestValue('carrot', s, 'giant')).toBe(40 * giant.multiplier);
+		expect(harvestValue('carrot', s, null)).toBe(40);
+	});
+
+	it('has an expected multiplier of 1 + sum(chance × bonus)', () => {
+		const expected =
+			1 +
+			bountiful.chance * (bountiful.multiplier - 1) +
+			giant.chance * (giant.multiplier - 1) +
+			golden.chance * (golden.multiplier - 1);
+		expect(expectedMutationMultiplier()).toBeCloseTo(expected);
 	});
 });
 

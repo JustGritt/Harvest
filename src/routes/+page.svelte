@@ -536,7 +536,7 @@
 							{cell}
 							{now}
 							selectedCrop={game.selectedCrop}
-							value={cell.crop ? harvestValue(cell.crop, game) : 0}
+							value={cell.crop ? harvestValue(cell.crop, game, cell.mutation) : 0}
 							pops={pops.filter((p) => p.cellId === cell.id)}
 							on:pointerdown={(e) => pressCell(r, c, cell, e)}
 							on:click={(e) =>

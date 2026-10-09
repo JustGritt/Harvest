@@ -3,11 +3,21 @@
 //   mixed  - clicks for the first 2 minutes, then idles; buys anything (cheapest first)
 //   active - clicks the whole time and never buys workers
 // The simulated player clicks 4 times per second, harvesting before planting.
+// Math.random is seeded, so mutation rolls (and every result) are the same on each run.
 
 import type { CropId, GameState, UpgradeId } from '$lib/types';
 
 let fakeNow = 1_000_000;
 Date.now = () => fakeNow;
+
+// mulberry32: a tiny seeded PRNG
+let seed = 42;
+Math.random = () => {
+	seed = (seed + 0x6d2b79f5) | 0;
+	let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+	t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+	return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
 
 // Imported after faking Date.now so the initial state uses the fake clock
 const { get } = await import('svelte/store');
@@ -79,6 +89,12 @@ function buyCheapest() {
 	}
 }
 
+// Share of earnings that came from mutated crops, per reporting interval
+let mutatedEarned = 0;
+gameStore.onHarvest((e) => {
+	if (e.mutation) mutatedEarned += e.value;
+});
+
 let lastEarned = 0;
 let lastMark = start;
 let firstPrestige: number | null = null;
@@ -107,9 +123,11 @@ for (let t = 0; t <= marks[marks.length - 1]; t += STEP) {
 				s.selectedCrop.padEnd(9),
 				`F${u.farmer}/P${u.seedPlanter} FT${u.farmerTraining}/PG${u.planterGears}`,
 				`Sp${u.sprinkler} QS${u.qualitySeeds} Fe${u.fertilizer} Fld${u.expandField}`,
-				`🌟${U.prestigeGain(s.runEarned)}`
+				`🌟${U.prestigeGain(s.runEarned)}`,
+				`mut ${Math.round((mutatedEarned / Math.max(1, s.runEarned - lastEarned)) * 100)}%`
 			].join('  ')
 		);
+		mutatedEarned = 0;
 		lastEarned = s.runEarned;
 		lastMark = fakeNow;
 	}

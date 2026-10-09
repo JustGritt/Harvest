@@ -12,6 +12,9 @@ export type UpgradeId =
 
 export type UpgradeLevels = Record<UpgradeId, number>;
 
+/** A rare variant rolled at planting that sells for more. */
+export type MutationId = 'bountiful' | 'giant' | 'golden';
+
 export type CellStatus = 'empty' | 'growing' | 'ready';
 
 export interface Cell {
@@ -20,6 +23,8 @@ export interface Cell {
 	crop: CropId | null;
 	plantedAt: number | null;
 	readyAt: number | null;
+	/** Rolled at planting; null for an ordinary crop (and empty plots). */
+	mutation: MutationId | null;
 }
 
 export interface GameState {
@@ -53,4 +58,5 @@ export interface HarvestEvent {
 	value: number;
 	/** True when a farmer harvested the plot rather than the player. */
 	auto: boolean;
+	mutation: MutationId | null;
 }

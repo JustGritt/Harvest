@@ -1,12 +1,20 @@
 import { BALANCE } from '$lib/data/balance';
 import { CROPS } from '$lib/data/crops';
+import { MUTATIONS, MUTATION_ORDER } from '$lib/data/mutations';
 import { UPGRADES } from '$lib/data/upgrades';
-import type { Cell, CropId, GameState, UpgradeId, UpgradeLevels } from '$lib/types';
+import type { Cell, CropId, GameState, MutationId, UpgradeId, UpgradeLevels } from '$lib/types';
 
 // ---------- Field ----------
 
 export function createCell(r: number, c: number): Cell {
-	return { id: `${r}-${c}`, status: 'empty', crop: null, plantedAt: null, readyAt: null };
+	return {
+		id: `${r}-${c}`,
+		status: 'empty',
+		crop: null,
+		plantedAt: null,
+		readyAt: null,
+		mutation: null
+	};
 }
 
 /** Expansions alternate: odd levels add a column, even levels add a row. */
@@ -81,8 +89,42 @@ export function growStage(progress: number): { stage: GrowStage; scale: number }
 	return { stage: 'young', scale: grow(0.5, 1) };
 }
 
-export function harvestValue(crop: CropId, state: Pick<GameState, 'upgrades' | 'legacySeeds'>) {
-	return Math.round(CROPS[crop].value * valueMultiplier(state));
+// ---------- Mutations ----------
+
+/** Chance that one planting gets this mutation. */
+export function mutationChance(id: MutationId): number {
+	return MUTATIONS[id].chance;
+}
+
+/** Value multiplier of a mutation (1 for an ordinary crop). */
+export function mutationMultiplier(id: MutationId | null): number {
+	return id ? MUTATIONS[id].multiplier : 1;
+}
+
+/** The mutation for a planting, given a uniform random `roll` in [0, 1). Rarest is checked first. */
+export function rollMutation(roll: number): MutationId | null {
+	let edge = 0;
+	for (const id of [...MUTATION_ORDER].reverse()) {
+		edge += mutationChance(id);
+		if (roll < edge) return id;
+	}
+	return null;
+}
+
+/** Average value multiplier from mutations over many plantings. */
+export function expectedMutationMultiplier(): number {
+	return MUTATION_ORDER.reduce(
+		(sum, id) => sum + mutationChance(id) * (mutationMultiplier(id) - 1),
+		1
+	);
+}
+
+export function harvestValue(
+	crop: CropId,
+	state: Pick<GameState, 'upgrades' | 'legacySeeds'>,
+	mutation: MutationId | null = null
+) {
+	return Math.round(CROPS[crop].value * valueMultiplier(state) * mutationMultiplier(mutation));
 }
 
 /** Money per second one plot earns with this crop, ignoring time spent empty. */

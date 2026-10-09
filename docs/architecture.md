@@ -137,7 +137,9 @@ How it's built:
 
 **A new crop:** add it to `CropId`, `CROPS` and `CROP_ORDER`, and draw its sprout, young and mature sprites (see `docs/art-style.md`). The UI and planters pick it up automatically.
 
-Old saves load fine after either change, because `hydrate()` fills in defaults.
+**A new mutation:** add it to `MutationId`, `MUTATIONS` and `MUTATION_ORDER` (`data/mutations.ts`), then give it a look in the crop art and a reap label. Rolls, values and the sim pick it up automatically.
+
+Old saves load fine after any of these, because `hydrate()` fills in defaults.
 
 ## Commands
 

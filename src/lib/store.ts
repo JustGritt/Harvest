@@ -1,6 +1,7 @@
 import { get, writable } from 'svelte/store';
 import { BALANCE } from '$lib/data/balance';
 import { CROPS } from '$lib/data/crops';
+import { MUTATIONS } from '$lib/data/mutations';
 import { UPGRADES } from '$lib/data/upgrades';
 import type { Cell, CropId, GameState, HarvestEvent, OfflineReport, UpgradeId } from '$lib/types';
 import {
@@ -12,6 +13,7 @@ import {
 	planterInterval,
 	prestigeGain,
 	resizeField,
+	rollMutation,
 	upgradeCost
 } from '$lib/utils/gameUtils';
 
@@ -62,20 +64,23 @@ function plantCell(state: GameState, cell: Cell, now: number) {
 	cell.crop = state.selectedCrop;
 	cell.plantedAt = now;
 	cell.readyAt = now + growTime(state.selectedCrop, state.upgrades);
+	cell.mutation = rollMutation(Math.random());
 }
 
 function harvestCell(state: GameState, cell: Cell, auto: boolean) {
 	if (cell.status !== 'ready' || !cell.crop) return;
-	const value = harvestValue(cell.crop, state);
+	const { mutation } = cell;
+	const value = harvestValue(cell.crop, state, mutation);
 	state.money += value;
 	state.runEarned += value;
 	state.lifetimeEarned += value;
 	state.totalHarvested++;
-	for (const listener of harvestListeners) listener({ cellId: cell.id, value, auto });
+	for (const listener of harvestListeners) listener({ cellId: cell.id, value, auto, mutation });
 	cell.status = 'empty';
 	cell.crop = null;
 	cell.plantedAt = null;
 	cell.readyAt = null;
+	cell.mutation = null;
 }
 
 // ---------- Simulation ----------
@@ -146,6 +151,10 @@ function hydrate(saved: Partial<GameState>): GameState {
 	};
 	const { rows, cols } = fieldSize(state.upgrades.expandField);
 	state.field = resizeField(state.field ?? [], rows, cols);
+	// Cells from before mutations (or with an unknown one) are ordinary crops
+	for (const cell of state.field.flat()) {
+		if (!cell.mutation || !(cell.mutation in MUTATIONS)) cell.mutation = null;
+	}
 	if (!state.unlockedCrops.includes(state.selectedCrop)) state.selectedCrop = 'wheat';
 	return state;
 }

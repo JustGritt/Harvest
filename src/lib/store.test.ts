@@ -3,7 +3,8 @@ import { get } from 'svelte/store';
 import { BALANCE } from '$lib/data/balance';
 import { CROPS } from '$lib/data/crops';
 import { gameStore } from '$lib/store';
-import type { GameState } from '$lib/types';
+import { MUTATIONS } from '$lib/data/mutations';
+import type { GameState, HarvestEvent } from '$lib/types';
 import { upgradeCost } from '$lib/utils/gameUtils';
 
 const SAVE_KEY = 'harvest-idle-save';
@@ -30,12 +31,15 @@ beforeEach(() => {
 			delete storage[k];
 		}
 	});
+	// No mutations unless a test asks for one
+	vi.spyOn(Math, 'random').mockReturnValue(0.999);
 	gameStore.hardReset();
 });
 
 afterEach(() => {
 	vi.useRealTimers();
 	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
 });
 
 describe('manual play', () => {
@@ -107,8 +111,8 @@ describe('onHarvest', () => {
 		state().farmerProgress = 1;
 		gameStore.tick(T0 + 3000);
 		expect(events).toEqual([
-			{ cellId: '0-0', value: 10, auto: false },
-			{ cellId: '0-1', value: 10, auto: true }
+			{ cellId: '0-0', value: 10, auto: false, mutation: null },
+			{ cellId: '0-1', value: 10, auto: true, mutation: null }
 		]);
 
 		stop();
@@ -116,6 +120,41 @@ describe('onHarvest', () => {
 		setNow(T0 + 6000);
 		gameStore.harvestCrop(0, 0);
 		expect(events).toHaveLength(2);
+	});
+});
+
+describe('mutations', () => {
+	it('are rolled at planting and multiply the harvest', () => {
+		vi.mocked(Math.random).mockReturnValue(0); // rarest mutation
+		gameStore.plantCrop(0, 0);
+		expect(state().field[0][0].mutation).toBe('golden');
+
+		const events: HarvestEvent[] = [];
+		const stop = gameStore.onHarvest((e) => events.push(e));
+		setNow(T0 + CROPS.wheat.growTime);
+		gameStore.harvestCrop(0, 0);
+		stop();
+		expect(state().money).toBe(10 * MUTATIONS.golden.multiplier);
+		expect(events[0].mutation).toBe('golden');
+		expect(state().field[0][0].mutation).toBeNull();
+	});
+
+	it('apply to seed planter plantings too', () => {
+		vi.mocked(Math.random).mockReturnValue(0);
+		state().upgrades.seedPlanter = 1;
+		gameStore.tick(T0 + 3000);
+		expect(state().field[0][0]).toMatchObject({ status: 'growing', mutation: 'golden' });
+	});
+
+	it('loads old cells without a mutation, and drops unknown ones', () => {
+		gameStore.plantCrop(0, 0);
+		const saved = JSON.parse(JSON.stringify(state()));
+		delete saved.field[0][0].mutation;
+		saved.field[0][1].mutation = 'cursed';
+		storage[SAVE_KEY] = JSON.stringify(saved);
+		gameStore.load();
+		expect(state().field[0][0]).toMatchObject({ status: 'growing', mutation: null });
+		expect(state().field[0][1].mutation).toBeNull();
 	});
 });
 

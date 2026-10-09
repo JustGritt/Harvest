@@ -37,13 +37,25 @@ There is one selected seed for the whole farm. Manual planting and seed planters
 
 ```
 growTime     = crop.growTime × 0.92^sprinkler
-harvestValue = round(crop.value × (1 + 0.2 × qualitySeeds) × 1.1^fertilizer × (1 + 0.1 × legacySeeds))
+harvestValue = round(crop.value × (1 + 0.2 × qualitySeeds) × 1.1^fertilizer × (1 + 0.1 × legacySeeds) × mutation.multiplier)
 workerInterval (ms per action, per worker) = 3000 × 0.88^trainingLevel
 upgradeCost  = floor(baseCost × costGrowth^level)
 legacySeedsFromSale = floor(sqrt(runEarned / 1,000,000))
 ```
 
 Money is always a whole number, because each harvest value is rounded.
+
+## Mutations
+
+Every planting (by hand or by a seed planter) rolls for a mutation, which multiplies that crop's harvest value. The roll is stored on the plot (`Cell.mutation`) and shows while the crop grows. There are no bad mutations.
+
+| Mutation  | Value | Chance per planting |
+| --------- | ----: | ------------------: |
+| Bountiful |    ×2 |                  5% |
+| Giant     |    ×4 |                1.5% |
+| Golden    |   ×10 |                0.4% |
+
+`rollMutation(roll)` checks the rarest first: `roll < golden` is Golden, then `roll < golden + giant` is Giant, and so on. On average mutations add `Σ chance × (multiplier − 1)` ≈ **+16.5%** income (`expectedMutationMultiplier`), and about one harvest in 14 is mutated. Numbers live in `data/mutations.ts`.
 
 ## Upgrades
 
@@ -102,15 +114,17 @@ Farmers harvest instantly, so plots never sit in a "harvesting" state.
 - `mixed` clicks for 2 minutes, then idles.
 - `active` clicks the whole time and never buys workers.
 
+`Math.random` is seeded in the sim, so mutation rolls and results are identical on every run. The `mut` column is the share of earnings in that interval that came from mutated crops.
+
 Results for the current numbers:
 
 | Time | Mixed (idle after 2m) | Active (clicks only) | Mixed crop | First 🌟         |
 | ---: | --------------------: | -------------------: | ---------- | ---------------- |
-|   2m |                  56/s |                 54/s | wheat      |                  |
-|  10m |                1.5K/s |               2.7K/s | pumpkin    |                  |
-|  20m |               13.8K/s |              15.2K/s | sunflower  | mixed: ~12m      |
-|  60m |               65.5K/s |              39.3K/s | sunflower  | 11 seeds by 60m  |
-| 120m |               91.0K/s |              53.9K/s | sunflower  | 20 seeds by 120m |
+|   2m |                  68/s |                108/s | wheat      |                  |
+|  10m |                2.4K/s |               4.3K/s | pumpkin    |                  |
+|  20m |               21.8K/s |              22.1K/s | sunflower  | mixed: ~11m      |
+|  60m |               76.9K/s |              47.7K/s | sunflower  | 12 seeds by 60m  |
+| 120m |                111K/s |              66.7K/s | sunflower  | 23 seeds by 120m |
 
 An idle player who stops clicking at 2 minutes keeps pace with a perfect nonstop clicker, and pulls ahead after about 20 minutes. The active bot clicks 4 times a second without ever stopping, which no real player does, so a real player who clicks only some of the time falls well below the idle line.
 
